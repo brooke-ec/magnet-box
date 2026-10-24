@@ -1,10 +1,12 @@
 #[macro_use]
 extern crate rocket;
 
+mod tracking;
+
 use rocket_dyn_templates::{Template, context};
 
 #[get("/")]
-fn index() -> Template {
+pub(crate) fn index() -> Template {
     Template::render("index", context! { field: "value" })
 }
 
@@ -13,4 +15,5 @@ fn rocket() -> _ {
     rocket::build()
         .attach(Template::fairing())
         .mount("/", routes![index])
+        .mount("/", tracking::routes())
 }
