@@ -6,6 +6,8 @@ mod tracking;
 use rocket_db_pools::Database;
 use rocket_dyn_templates::{Template, context};
 
+use crate::tracking::TorrentLibrary;
+
 #[derive(Database)]
 #[database("storage")]
 struct Storage(sqlx::SqlitePool);
@@ -35,6 +37,7 @@ async fn main() -> Result<(), rocket::Error> {
         .attach(Storage::init())
         .attach(Template::fairing())
         .attach(rocket::fairing::AdHoc::try_on_ignite("migrations", migrations))
+        .manage(TorrentLibrary::new())
         .mount("/", routes![index])
         .mount("/", tracking::routes())
         .launch()
