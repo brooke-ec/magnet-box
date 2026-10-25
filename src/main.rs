@@ -1,12 +1,14 @@
 #[macro_use]
 extern crate rocket;
 
+mod configuration;
 mod tracking;
 
+use rocket::fairing::AdHoc;
 use rocket_db_pools::Database;
 use rocket_dyn_templates::{Template, context};
 
-use crate::tracking::TorrentLibrary;
+use crate::{configuration::AppConfiguration, tracking::TorrentLibrary};
 
 #[derive(Database)]
 #[database("storage")]
@@ -36,7 +38,8 @@ async fn main() -> Result<(), rocket::Error> {
     rocket::build()
         .attach(Storage::init())
         .attach(Template::fairing())
-        .attach(rocket::fairing::AdHoc::try_on_ignite("migrations", migrations))
+        .attach(AdHoc::try_on_ignite("migrations", migrations))
+        .attach(AdHoc::config::<AppConfiguration>())
         .manage(TorrentLibrary::new())
         .mount("/", routes![index])
         .mount("/", tracking::routes())

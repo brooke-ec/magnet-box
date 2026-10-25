@@ -10,6 +10,8 @@ use rocket::{
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 
+use crate::configuration::AppConfiguration;
+
 macro_rules! err {
     ($expr:expr) => {
         BencodeError { reason: $expr.to_string() }
@@ -23,7 +25,12 @@ pub(crate) fn routes() -> Vec<rocket::Route> {
 
 /// The announce endpoint for the BitTorrent tracker.
 #[get("/announce")]
-async fn announce<'r>(uri: &'r Origin<'r>, ip: IpAddr, library: &State<TorrentLibrary>) -> BencodeResult<Bencode<AnnounceResponse>> {
+async fn announce<'r>(
+    uri: &'r Origin<'r>,
+    ip: IpAddr,
+    library: &State<TorrentLibrary>,
+    config: &State<AppConfiguration>,
+) -> BencodeResult<Bencode<AnnounceResponse>> {
     let query: AnnounceQuery = serde_querystring::from_bytes(
         uri.query().ok_or(err!("Invalid parameters"))?.as_bytes(),
         serde_querystring::ParseMode::UrlEncoded,
@@ -53,7 +60,7 @@ async fn announce<'r>(uri: &'r Origin<'r>, ip: IpAddr, library: &State<TorrentLi
     // selection O(numwant) in memory instead of copying the whole swarm.
     let peer_index = torrent.swarm.get_index_of(&peer_id).expect("inserted peer must exist");
     let candidate_len = torrent.swarm.len() - 1;
-    let numwant = query.numwant.unwrap_or(50).min(candidate_len);
+    let numwant = query.numwant.unwrap_or(config.numwant).min(candidate_len);
     let peers = sample(&mut rand::rng(), candidate_len, numwant)
         .into_iter()
         .filter_map(|i| {
@@ -68,7 +75,10 @@ async fn announce<'r>(uri: &'r Origin<'r>, ip: IpAddr, library: &State<TorrentLi
         _ => AnnounceResponsePeerList::compact(peers),
     };
 
-    BencodeResult::Ok(Bencode(AnnounceResponse { interval: 1800, peers }))
+    BencodeResult::Ok(Bencode(AnnounceResponse {
+        interval: config.interval,
+        peers,
+    }))
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]
