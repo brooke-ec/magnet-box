@@ -41,8 +41,8 @@ async fn main() -> Result<(), rocket::Error> {
         .attach(AdHoc::try_on_ignite("migrations", migrations))
         .attach(AdHoc::config::<AppConfiguration>())
         .manage(TorrentLibrary::new())
+        .attach(tracking::faring())
         .mount("/", routes![index])
-        .mount("/", tracking::routes())
         .launch()
         .await?;
 

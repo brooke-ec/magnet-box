@@ -4,11 +4,14 @@ use chrono::{DateTime, Utc};
 use rand::seq::index::sample;
 use rocket::{
     Request, State,
-    http::{Status, uri::Origin},
+    fairing::AdHoc,
+    futures::future::BoxFuture,
+    http::{ContentType, Status, uri::Origin},
     response::Responder,
+    tokio::time,
 };
 use serde::{Deserialize, Serialize};
-use std::net::IpAddr;
+use std::{net::IpAddr, sync::Arc, time::Duration};
 
 use crate::configuration::AppConfiguration;
 
@@ -18,9 +21,48 @@ macro_rules! err {
     };
 }
 
-/// Returns all routes for the tracker module.
-pub(crate) fn routes() -> Vec<rocket::Route> {
-    routes![announce]
+/// Returns a fairing that mounts the tracker endpoints.
+pub(crate) fn faring() -> rocket::fairing::AdHoc {
+    rocket::fairing::AdHoc::on_ignite("tracker", |rocket| async {
+        rocket
+            .attach(AdHoc::on_liftoff("tracker:bookkeeping", bookkeeping))
+            .mount("/", routes![announce])
+    })
+}
+
+/// Starts a background task that performs bookkeeping for the tracker.
+fn bookkeeping<'a>(rocket: &'a rocket::Rocket<rocket::Orbit>) -> BoxFuture<'a, ()> {
+    let interval = rocket.state::<AppConfiguration>().unwrap().interval;
+    let library = rocket.state::<TorrentLibrary>().unwrap().clone();
+    let mut shutdown = rocket.shutdown();
+
+    Box::pin(async move {
+        rocket::tokio::spawn(async move {
+            let mut wait = time::interval(Duration::from_secs(interval));
+            loop {
+                rocket::tokio::select! {
+                    _ = &mut shutdown => {
+                        rocket::info!("Stopping tracker bookkeeping...");
+                        break;
+                    }
+                    _ = wait.tick() => {
+                        rocket::debug!("Cleaning up stale peers...");
+                        let now = Utc::now();
+                        library
+                            .0
+                            .iter_mut_async(|mut torrent| {
+                                torrent.swarm.retain(|_, peer| {
+                                    let elapsed = now.signed_duration_since(peer.last_announce);
+                                    elapsed.num_seconds() < (interval as i64) * 2
+                                });
+                                true
+                            })
+                            .await;
+                    }
+                }
+            }
+        });
+    })
 }
 
 /// The announce endpoint for the BitTorrent tracker.
@@ -30,7 +72,7 @@ async fn announce<'r>(
     ip: IpAddr,
     library: &State<TorrentLibrary>,
     config: &State<AppConfiguration>,
-) -> BencodeResult<Bencode<AnnounceResponse>> {
+) -> BencodeResult<AnnounceResponse> {
     let query: AnnounceQuery = serde_querystring::from_bytes(
         uri.query().ok_or(err!("Invalid parameters"))?.as_bytes(),
         serde_querystring::ParseMode::UrlEncoded,
@@ -40,45 +82,56 @@ async fn announce<'r>(
     let peer_id: [u8; 20] = query.peer_id.as_ref().try_into().map_err(|_| err!("Invalid peer_id length"))?;
     let mut torrent = library.0.get_async(&info_hash).await.ok_or(err!("Torrent not allowed"))?;
 
-    let state = match query.left {
-        0 => PeerState::Seeding,
-        _ => PeerState::Leeching,
-    };
+    if query.event == Some(AnnounceEvent::Stopped) {
+        torrent.swarm.swap_remove(&peer_id);
+        Err(err!("Peer removed from swarm"))
+    } else {
+        let state = match query.left {
+            0 => PeerState::Seeding,
+            _ => PeerState::Leeching,
+        };
 
-    torrent.swarm.insert(
-        peer_id,
-        Peer {
-            ip: query.ip.unwrap_or(ip),
-            last_announce: Utc::now(),
-            port: query.port,
+        torrent.swarm.insert(
             peer_id,
-            state,
-        },
-    );
+            Peer {
+                ip: query.ip.unwrap_or(ip),
+                last_announce: Utc::now(),
+                port: query.port,
+                peer_id,
+                state,
+            },
+        );
 
-    // Sample indices from the swarm while skipping the requesting peer. This keeps
-    // selection O(numwant) in memory instead of copying the whole swarm.
-    let peer_index = torrent.swarm.get_index_of(&peer_id).expect("inserted peer must exist");
-    let candidate_len = torrent.swarm.len() - 1;
-    let numwant = query.numwant.unwrap_or(config.numwant).min(candidate_len);
-    let peers = sample(&mut rand::rng(), candidate_len, numwant)
-        .into_iter()
-        .filter_map(|i| {
-            let swarm_index = if i >= peer_index { i + 1 } else { i };
-            torrent.swarm.get_index(swarm_index).map(|(_, peer)| peer)
-        })
-        .collect::<Vec<&Peer>>();
+        // Sample indices from the swarm while skipping the requesting peer. This keeps
+        // selection O(numwant) in memory instead of copying the whole swarm.
+        let peer_index = torrent.swarm.get_index_of(&peer_id).expect("inserted peer must exist");
+        let candidate_len = torrent.swarm.len() - 1;
+        let numwant = query.numwant.unwrap_or(config.numwant).min(candidate_len);
+        let peers = sample(&mut rand::rng(), candidate_len, numwant)
+            .into_iter()
+            .filter_map(|i| {
+                let swarm_index = if i >= peer_index { i + 1 } else { i };
+                torrent.swarm.get_index(swarm_index).map(|(_, peer)| peer)
+            })
+            .collect::<Vec<&Peer>>();
 
-    println!("Announce: {:?} from {}:{} ({} peers returned)", query, ip, query.port, peers.len());
-    let peers = match query.compact {
-        Some(0) => AnnounceResponsePeerList::wide(peers),
-        _ => AnnounceResponsePeerList::compact(peers),
-    };
+        rocket::debug!(
+            "Announce from {}:{}, returned {} peers",
+            query.ip.unwrap_or(ip),
+            query.port,
+            peers.len()
+        );
 
-    BencodeResult::Ok(Bencode(AnnounceResponse {
-        interval: config.interval,
-        peers,
-    }))
+        let peers = match query.compact {
+            Some(0) => AnnounceResponsePeerList::wide(peers),
+            _ => AnnounceResponsePeerList::compact(peers),
+        };
+
+        BencodeResult::Ok(Bencode(AnnounceResponse {
+            interval: config.interval,
+            peers,
+        }))
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]
@@ -109,7 +162,7 @@ enum AnnounceEvent {
 struct AnnounceResponse {
     #[serde(flatten)]
     peers: AnnounceResponsePeerList,
-    interval: u32,
+    interval: u64,
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
@@ -187,7 +240,7 @@ impl<T: std::error::Error> From<T> for BencodeError {
     }
 }
 
-type BencodeResult<T> = Result<T, BencodeError>;
+type BencodeResult<T> = Result<Bencode<T>, BencodeError>;
 
 #[derive(Debug, PartialEq, Eq)]
 struct Bencode<T>(T);
@@ -199,15 +252,18 @@ impl<'r, T: Serialize> Responder<'r, 'static> for Bencode<T> {
             Status::InternalServerError
         })?;
 
-        bytes.respond_to(req)
+        let mut response = bytes.respond_to(req)?;
+        response.set_header(ContentType::Plain);
+        Ok(response)
     }
 }
 
-pub(crate) struct TorrentLibrary(scc::HashMap<[u8; 20], Torrent>);
+#[derive(Clone)]
+pub(crate) struct TorrentLibrary(Arc<scc::HashMap<[u8; 20], Torrent>>);
 
 impl TorrentLibrary {
     pub(crate) fn new() -> Self {
-        let map = scc::HashMap::new();
+        let map = Arc::new(scc::HashMap::new());
         map.insert_sync(
             [
                 0x66, 0x79, 0x55, 0x0d, 0x75, 0x4d, 0x4d, 0xbc, 0x56, 0xdb, 0x6f, 0x6b, 0x34, 0x65, 0xdb, 0x29, 0xc0, 0x86, 0x99, 0x24,
