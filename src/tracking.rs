@@ -51,10 +51,26 @@ fn bookkeeping<'a>(rocket: &'a rocket::Rocket<rocket::Orbit>) -> BoxFuture<'a, (
                         library
                             .0
                             .iter_mut_async(|mut torrent| {
+                                let mut removed_leechers = 0;
+                                let mut removed_seeders = 0;
+
                                 torrent.swarm.retain(|_, peer| {
                                     let elapsed = now.signed_duration_since(peer.last_announce);
-                                    elapsed.num_seconds() < (interval as i64) * 2
+                                    let retain = elapsed.num_seconds() < (interval as i64) * 2;
+
+                                    if !retain {
+                                        match peer.state {
+                                            PeerState::Leeching => removed_leechers += 1,
+                                            PeerState::Seeding => removed_seeders += 1,
+                                        }
+                                    }
+
+                                    retain
                                 });
+
+                                torrent.leechers -= removed_leechers;
+                                torrent.seeders -= removed_seeders;
+
                                 true
                             })
                             .await;
@@ -83,27 +99,52 @@ async fn announce<'r>(
     let mut torrent = library.0.get_async(&info_hash).await.ok_or(err!("Torrent not allowed"))?;
 
     if query.event == Some(AnnounceEvent::Stopped) {
-        torrent.swarm.swap_remove(&peer_id);
+        if let Some(peer) = torrent.swarm.swap_remove(&peer_id) {
+            match peer.state {
+                PeerState::Leeching => torrent.leechers -= 1,
+                PeerState::Seeding => torrent.seeders -= 1,
+            }
+        }
+
         Err(err!("Peer removed from swarm"))
     } else {
-        let state = match query.left {
+        let new_state = match query.left {
             0 => PeerState::Seeding,
             _ => PeerState::Leeching,
         };
 
-        torrent.swarm.insert(
-            peer_id,
-            Peer {
-                ip: query.ip.unwrap_or(ip),
-                last_announce: Utc::now(),
-                port: query.port,
+        let old_state = torrent
+            .swarm
+            .insert(
                 peer_id,
-                state,
-            },
-        );
+                Peer {
+                    ip: query.ip.unwrap_or(ip),
+                    last_announce: Utc::now(),
+                    state: new_state.clone(),
+                    port: query.port,
+                    peer_id,
+                }, // Insert the peer into the swarm, replacing any existing entry
+            )
+            .map(|peer| peer.state);
 
-        // Sample indices from the swarm while skipping the requesting peer. This keeps
-        // selection O(numwant) in memory instead of copying the whole swarm.
+        match (old_state, new_state) {
+            (Some(PeerState::Leeching), PeerState::Seeding) => {
+                torrent.leechers -= 1;
+                torrent.seeders += 1;
+            }
+            (Some(PeerState::Seeding), PeerState::Leeching) => {
+                torrent.leechers += 1;
+                torrent.seeders -= 1;
+            }
+            (None, PeerState::Leeching) => {
+                torrent.leechers += 1;
+            }
+            (None, PeerState::Seeding) => {
+                torrent.seeders += 1;
+            }
+            _ => {}
+        }
+
         let peer_index = torrent.swarm.get_index_of(&peer_id).expect("inserted peer must exist");
         let candidate_len = torrent.swarm.len() - 1;
         let numwant = query.numwant.unwrap_or(config.numwant).min(candidate_len);
@@ -274,6 +315,8 @@ impl TorrentLibrary {
                 info_hash: [0; 20],
                 name: "Example Torrent".to_string(),
                 size: 1024 * 1024 * 1024, // 1 GiB
+                leechers: 0,
+                seeders: 0,
             },
         )
         .ok();
@@ -282,16 +325,18 @@ impl TorrentLibrary {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 struct Torrent {
     created_at: chrono::DateTime<chrono::Utc>,
     swarm: indexmap::IndexMap<[u8; 20], Peer>,
     info_hash: [u8; 20],
+    leechers: usize,
+    seeders: usize,
     name: String,
     size: u64,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 struct Peer {
     last_announce: DateTime<Utc>,
     peer_id: [u8; 20],
@@ -300,7 +345,7 @@ struct Peer {
     port: u16,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 enum PeerState {
     Leeching,
     Seeding,
