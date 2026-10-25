@@ -54,11 +54,11 @@ async fn announce<'r>(uri: &'r Origin<'r>, ip: IpAddr, library: &State<TorrentLi
     let numwant = query.numwant.unwrap_or(50).min(len);
     let peers = sample(&mut rand::rng(), len, numwant)
         .into_iter()
-        .filter_map(|i| torrent.swarm.get_index(i))
-        .filter(|(k, _)| **k != info_hash)
-        .map(|(_, p)| p)
+        .filter_map(|i| torrent.swarm.get_index(i).map(|(_, peer)| peer))
+        .filter(|p| p.peer_id != peer_id)
         .collect::<Vec<&Peer>>();
 
+    println!("Announce: {:?} from {}:{} ({} peers returned)", query, ip, query.port, peers.len());
     let peers = match query.compact {
         Some(0) => AnnounceResponsePeerList::wide(peers),
         _ => AnnounceResponsePeerList::compact(peers),
