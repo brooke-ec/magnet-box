@@ -1,7 +1,6 @@
-FROM docker.io/rust:slim AS build
+FROM docker.io/rust:slim-bookworm AS build
 
-## cargo package name: customize here or provide via --build-arg
-ARG pkg=rocket-app
+ARG pkg=magnet-box
 
 WORKDIR /build
 
@@ -14,14 +13,14 @@ RUN --mount=type=cache,target=/build/target \
     cargo build --release; \
     objcopy --compress-debug-sections target/release/$pkg ./main
 
-################################################################################
-
-FROM docker.io/alpine:latest
+FROM docker.io/debian:bookworm-slim
 
 WORKDIR /app
 
+RUN mkdir -p data
+
 ## copy the main binary
-COPY --from=build /build/main ./
+COPY --from=build /build/main /app/main
 
 ## copy runtime assets which may or may not exist
 COPY --from=build /build/Rocket.tom[l] ./static
@@ -32,6 +31,6 @@ COPY --from=build /build/template[s] ./templates
 ENV ROCKET_ADDRESS=0.0.0.0
 ENV ROCKET_PORT=8080
 
-ENV ROCKET_DATABASES='{"storage":{"url":"sqlite://data/magnet-box.db"}}'
+ENV ROCKET_DATABASES='{storage={url="sqlite://data/magnet-box.db"}}'
 
 CMD ["./main"]
