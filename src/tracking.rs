@@ -2,10 +2,8 @@
 
 use std::net::IpAddr;
 
-use rocket::{Request, futures::lock::Mutex, http::Status, response::Responder};
+use rocket::{Request, http::Status, response::Responder};
 use serde::Serialize;
-
-static PEERS: Mutex<Vec<u8>> = Mutex::new(vec![]);
 
 /// Returns all routes for the tracker module.
 pub(crate) fn routes() -> Vec<rocket::Route> {
@@ -15,19 +13,8 @@ pub(crate) fn routes() -> Vec<rocket::Route> {
 /// The announce endpoint for the BitTorrent tracker.
 #[get("/announce?<query..>")]
 async fn announce<'r>(query: AnnounceQuery<'r>, ip: IpAddr) -> Bencode<AnnounceResponseCompact> {
-    println!("Announce query: {:?} from {}", query, ip);
-    let mut peers = PEERS.lock().await;
-
-    match ip {
-        IpAddr::V4(ip) => {
-            peers.extend_from_slice(&ip.octets());
-            peers.extend_from_slice(&query.port.to_be_bytes());
-        }
-        _ => unimplemented!("IPv6 is not supported yet"),
-    };
-
     Bencode(AnnounceResponseCompact {
-        peers: peers.clone(),
+        peers: vec![],
         interval: 1800,
     })
 }

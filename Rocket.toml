@@ -1,0 +1,2 @@
+[default.databases.storage]
+url = "sqlite://magnet-box.db"

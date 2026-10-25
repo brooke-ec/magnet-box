@@ -1,15 +1,37 @@
-FROM rust:alpine AS builder
+FROM docker.io/rust:slim AS build
 
-WORKDIR /src
+## cargo package name: customize here or provide via --build-arg
+ARG pkg=rocket-app
+
+WORKDIR /build
+
 COPY . .
 
-RUN cargo build --release
+RUN --mount=type=cache,target=/build/target \
+    --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    set -eux; \
+    cargo build --release; \
+    objcopy --compress-debug-sections target/release/$pkg ./main
 
-FROM alpine:latest
+################################################################################
 
-WORKDIR /magnet-box
+FROM docker.io/alpine:latest
 
-COPY --from=builder /src/target/release/magnet-box .
-COPY templates templates
+WORKDIR /app
 
-CMD ["./magnet-box"]
+## copy the main binary
+COPY --from=build /build/main ./
+
+## copy runtime assets which may or may not exist
+COPY --from=build /build/Rocket.tom[l] ./static
+COPY --from=build /build/stati[c] ./static
+COPY --from=build /build/template[s] ./templates
+
+## ensure the container listens globally on port 8080
+ENV ROCKET_ADDRESS=0.0.0.0
+ENV ROCKET_PORT=8080
+
+ENV ROCKET_DATABASES='{"storage":{"url":"sqlite://data/magnet-box.db"}}'
+
+CMD ["./main"]
