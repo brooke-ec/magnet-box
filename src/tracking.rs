@@ -49,13 +49,17 @@ async fn announce<'r>(uri: &'r Origin<'r>, ip: IpAddr, library: &State<TorrentLi
         },
     );
 
-    // selects a random sample of peers from the swarm to return to the client (not including the requesting peer).
-    let len = torrent.swarm.len();
-    let numwant = query.numwant.unwrap_or(50).min(len);
-    let peers = sample(&mut rand::rng(), len, numwant)
+    // Sample indices from the swarm while skipping the requesting peer. This keeps
+    // selection O(numwant) in memory instead of copying the whole swarm.
+    let peer_index = torrent.swarm.get_index_of(&peer_id).expect("inserted peer must exist");
+    let candidate_len = torrent.swarm.len() - 1;
+    let numwant = query.numwant.unwrap_or(50).min(candidate_len);
+    let peers = sample(&mut rand::rng(), candidate_len, numwant)
         .into_iter()
-        .filter_map(|i| torrent.swarm.get_index(i).map(|(_, peer)| peer))
-        .filter(|p| p.peer_id != peer_id)
+        .filter_map(|i| {
+            let swarm_index = if i >= peer_index { i + 1 } else { i };
+            torrent.swarm.get_index(swarm_index).map(|(_, peer)| peer)
+        })
         .collect::<Vec<&Peer>>();
 
     println!("Announce: {:?} from {}:{} ({} peers returned)", query, ip, query.port, peers.len());
@@ -93,6 +97,7 @@ enum AnnounceEvent {
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
 struct AnnounceResponse {
+    #[serde(flatten)]
     peers: AnnounceResponsePeerList,
     interval: u32,
 }
@@ -101,8 +106,8 @@ struct AnnounceResponse {
 #[serde(untagged)]
 enum AnnounceResponsePeerList {
     Compact {
-        #[serde(with = "serde_bytes")]
-        peers: Vec<u8>,
+        #[serde(with = "serde_bytes", rename = "peers")]
+        peers4: Vec<u8>,
         #[serde(with = "serde_bytes")]
         peers6: Vec<u8>,
     },
@@ -129,7 +134,7 @@ impl AnnounceResponsePeerList {
             }
         }
 
-        AnnounceResponsePeerList::Compact { peers: peers4, peers6 }
+        AnnounceResponsePeerList::Compact { peers4, peers6 }
     }
 
     fn wide(peers: Vec<&Peer>) -> Self {
