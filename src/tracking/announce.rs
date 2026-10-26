@@ -155,10 +155,11 @@ pub(super) async fn announce_endpoint<'r>(
 
     let info_hash: [u8; 20] = query.info_hash.as_ref().try_into().map_err(|_| err!("Invalid info_hash length"))?;
     let peer_id: [u8; 20] = query.peer_id.as_ref().try_into().map_err(|_| err!("Invalid peer_id length"))?;
-    let mut torrent = library.0.get_async(&info_hash).await.ok_or(err!("Torrent not allowed"))?;
+    let mut swarm = library.get_swarm(&info_hash).await.ok_or(err!("Torrent not allowed"))?;
+    let mut torrent = library.get_torrent(&swarm.torrent).await.expect("Swarm exists, torrent does not");
 
     if query.event == Some(AnnounceEvent::Stopped) {
-        if let Some(peer) = torrent.swarm.swap_remove(&peer_id) {
+        if let Some(peer) = swarm.peers.swap_remove(&peer_id) {
             match peer.state {
                 PeerState::Leeching => torrent.leechers -= 1,
                 PeerState::Seeding => torrent.seeders -= 1,
@@ -172,8 +173,8 @@ pub(super) async fn announce_endpoint<'r>(
             _ => PeerState::Leeching,
         };
 
-        let old_state = torrent
-            .swarm
+        let old_state = swarm
+            .peers
             .insert(
                 peer_id,
                 Peer {
@@ -204,15 +205,11 @@ pub(super) async fn announce_endpoint<'r>(
             _ => {}
         }
 
-        let peer_index = torrent.swarm.get_index_of(&peer_id).expect("inserted peer must exist");
-        let candidate_len = torrent.swarm.len() - 1;
-        let numwant = query.numwant.unwrap_or(config.numwant).min(candidate_len);
-        let peers = sample(&mut rand::rng(), candidate_len, numwant)
+        let numwant = query.numwant.unwrap_or(config.numwant).min(swarm.peers.len());
+        let peers = sample(&mut rand::rng(), swarm.peers.len(), numwant)
             .into_iter()
-            .filter_map(|i| {
-                let swarm_index = if i >= peer_index { i + 1 } else { i };
-                torrent.swarm.get_index(swarm_index).map(|(_, peer)| peer)
-            })
+            .filter_map(|i| swarm.peers.get_index(i).map(|(_, p)| p))
+            .filter(|p| p.peer_id != peer_id)
             .collect::<Vec<&Peer>>();
 
         rocket::debug!(

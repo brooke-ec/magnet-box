@@ -21,7 +21,9 @@ sqlx = { version = "0.7", features = [
     "migrate",
     "runtime-tokio",
     "sqlite",
+    "uuid",
 ] }
 rand = "0.10.3"
 indexmap = "2.14.2"
 serde-inline-default = "1.0.3"
+uuid = { version = "1.29.0", features = ["v4"] }

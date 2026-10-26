@@ -41,32 +41,43 @@ fn bookkeeping<'a>(rocket: &'a rocket::Rocket<rocket::Orbit>) -> BoxFuture<'a, (
                     _ = wait.tick() => {
                         rocket::debug!("Cleaning up stale peers...");
                         let now = Utc::now();
-                        library
-                            .0
-                            .iter_mut_async(|mut torrent| {
-                                let mut removed_leechers = 0;
-                                let mut removed_seeders = 0;
+                        let mut updates = std::collections::HashMap::new();
+                        library.iter_swarms(|swarm| {
+                            let mut leechers = 0;
+                            let mut seeders = 0;
 
-                                torrent.swarm.retain(|_, peer| {
-                                    let elapsed = now.signed_duration_since(peer.last_announce);
-                                    let retain = elapsed.num_seconds() < (interval as i64) * 2;
+                            swarm.peers.retain(|_, peer| {
+                                let elapsed = now.signed_duration_since(peer.last_announce);
+                                let retain = elapsed.num_seconds() < (interval as i64) * 2;
 
-                                    if !retain {
-                                        match peer.state {
-                                            PeerState::Leeching => removed_leechers += 1,
-                                            PeerState::Seeding => removed_seeders += 1,
-                                        }
+                                if !retain {
+                                    match peer.state {
+                                        PeerState::Leeching => leechers += 1,
+                                        PeerState::Seeding => seeders += 1,
                                     }
+                                }
 
-                                    retain
-                                });
+                                retain
+                            });
 
-                                torrent.leechers -= removed_leechers;
-                                torrent.seeders -= removed_seeders;
+                            if leechers != 0 || seeders != 0 {
+                                updates.entry(swarm.torrent).and_modify(|(l, s)| {
+                                    *l += leechers;
+                                    *s += seeders;
+                                }).or_insert((leechers, seeders));
+                            }
 
-                                true
-                            })
-                            .await;
+                            true
+                        }).await;
+
+                        for (torrent_id, (leechers, seeders)) in updates {
+                            let mut torrent = library
+                                .get_torrent(&torrent_id)
+                                .await
+                                .expect("Swarm exists, torrent does not");
+                            torrent.leechers -= leechers;
+                            torrent.seeders -= seeders;
+                        }
                     }
                 }
             }

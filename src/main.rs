@@ -40,7 +40,7 @@ async fn main() -> Result<(), rocket::Error> {
         .attach(Template::fairing())
         .attach(AdHoc::try_on_ignite("migrations", migrations))
         .attach(AdHoc::config::<AppConfiguration>())
-        .manage(TorrentLibrary::new())
+        .manage(TorrentLibrary::new().await)
         .attach(tracking::faring())
         .mount("/", routes![index])
         .launch()
