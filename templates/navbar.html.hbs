@@ -1,0 +1,15 @@
+<nav>
+	<div class="title">{{instance_title}}</div>
+	<div class="nav-links">
+		{{#if user}}
+			{{#if user.is_admin}}
+				<a href="/admin" class="fas"></a>
+			{{/if}}
+			<a href="/upload" class="fas"></a>
+			<a href="/profile" class="fas"></a>
+			<a href="/logout" class="fas"></a>
+		{{else}}
+			<a href="/login" class="fas"></a>
+		{{/if}}
+	</div>
+</nav>

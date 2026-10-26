@@ -11,7 +11,6 @@
 	src: url("/static/fa-solid.woff2") format("woff2");
 }
 
-.fa-solid,
 .fas {
 	font-family: "Font Awesome 7 Free";
 	font-weight: 900;
@@ -237,4 +236,96 @@ body {
 	font-family: "Kodchasan", sans-serif;
 	background-color: var(--ctp-base);
 	color: var(--ctp-text);
+	margin: 2rem;
+}
+
+@media (max-width: 600px) {
+	body {
+		margin: 1rem;
+	}
+}
+
+nav {
+	justify-content: space-between;
+	align-items: center;
+	margin: 0 10px;
+	display: flex;
+}
+
+nav > .nav-links {
+	align-items: center;
+	display: flex;
+}
+
+nav > .nav-links > a {
+	aspect-ratio: 1/1;
+	font-size: 20px;
+	padding: 5px;
+}
+
+nav > .title {
+	font-size: 30px;
+}
+
+a {
+	transition: color 125ms ease-in-out;
+	color: var(--ctp-text);
+	text-decoration: none;
+}
+
+a:hover {
+	color: var(--ctp-blue);
+}
+
+.torrent-list {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) fit-content(100%) fit-content(100%) fit-content(100%);
+	border-radius: 10px;
+	width: 100%;
+	margin: 25px 0;
+	font-size: 0.9em;
+	font-family: sans-serif;
+	min-width: 400px;
+	overflow: hidden;
+	outline: 1px solid var(--ctp-overlay0);
+}
+
+.torrent-list-header,
+.torrent-list-row {
+	display: grid;
+	grid-column: 1 / -1;
+	grid-template-columns: subgrid;
+	align-items: center;
+}
+
+.torrent-list-header {
+	background-color: #1e66f5;
+	text-align: left;
+}
+
+.torrent-list-header > div,
+.torrent-list-row > div {
+	white-space: nowrap;
+	padding: 12px 15px;
+	gap: 10px;
+}
+
+.torrent-list-row {
+	border-bottom: 1px solid var(--ctp-overlay0);
+}
+
+.torrent-list-row:nth-child(odd) {
+	background-color: var(--ctp-mantle);
+}
+
+.torrent-list-row:last-of-type {
+	border-bottom: none;
+}
+
+.torrent-list a {
+	padding: 5px 8px;
+}
+
+.torrent-list .fas {
+	margin-right: 5px;
 }

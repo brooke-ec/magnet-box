@@ -11,4 +11,7 @@ pub(crate) struct AppConfiguration {
     /// The default number of peers to return in a response to an announce request.
     #[serde_inline_default(50)]
     pub(crate) numwant: usize,
+
+    #[serde_inline_default("Magnet Box".to_string())]
+    pub(crate) instance_title: String,
 }

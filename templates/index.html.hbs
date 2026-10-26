@@ -1,6 +1,25 @@
 {{#*inline "content"}}
-  <h1>Welcome to Magnet Box</h1>
-  <p>This is a simple web application built with Rocket and Handlebars.</p>
+  <div style="overflow-x: auto; padding: 1px">
+    <div class="torrent-list">
+      <div class="torrent-list-header">
+        <div>Name</div>
+        <div>Size</div>
+        <div>Download</div>
+        <div>Date</div>
+      </div>
+      {{#each torrents}}
+        <div class="torrent-list-row">
+          <div><span class="fas"></span> <a href="{{url}}">{{name}}</a></div>
+          <div>{{size}}</div>
+          <div>
+            <a href="{{magnet}}" class="fas"></a>
+            <a href="{{download}}" class="fas"></a>
+          </div>
+          <div>{{date}}</div>
+        </div>
+      {{/each}}
+    </div>
+  </div>
 {{/inline}}
 
 {{> layout }}

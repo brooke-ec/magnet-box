@@ -23,7 +23,7 @@ impl TorrentLibrary {
 
         library
             .add(Torrent {
-                created_at: Utc::now(),
+                date: Utc::now(),
                 v1_hash: [
                     0x66, 0x79, 0x55, 0x0d, 0x75, 0x4d, 0x4d, 0xbc, 0x56, 0xdb, 0x6f, 0x6b, 0x34, 0x65, 0xdb, 0x29, 0xc0, 0x86, 0x99, 0x24,
                 ],
@@ -92,11 +92,24 @@ impl TorrentLibrary {
     {
         self.0.swarms.iter_mut_async(|mut e| f(&mut e)).await
     }
+
+    #[inline]
+    pub(crate) async fn iter_torrents<F>(&self, mut f: F) -> bool
+    where
+        F: FnMut(&mut Torrent) -> bool,
+    {
+        self.0.torrents.iter_mut_async(|mut e| f(&mut e)).await
+    }
+
+    #[inline]
+    pub(crate) fn len(&self) -> usize {
+        self.0.torrents.len()
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) struct Torrent {
-    pub(crate) created_at: chrono::DateTime<chrono::Utc>,
+    pub(crate) date: chrono::DateTime<chrono::Utc>,
     pub(crate) v1_hash: InfoHash,
     pub(crate) v2_hash: InfoHash,
     pub(crate) leechers: usize,
