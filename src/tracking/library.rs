@@ -81,7 +81,7 @@ impl TorrentLibrary {
     }
 
     #[inline]
-    pub(super) async fn get_torrent(&self, id: &Uuid) -> Option<OccupiedEntry<'_, Uuid, Torrent, RandomState>> {
+    pub(crate) async fn get_torrent(&self, id: &Uuid) -> Option<OccupiedEntry<'_, Uuid, Torrent, RandomState>> {
         self.0.torrents.get_async(id).await
     }
 
