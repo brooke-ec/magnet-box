@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT TRUE FROM [user] WHERE [PASSWORD] IS NOT NULL LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "TRUE",
+        "ordinal": 0,
+        "type_info": "Int"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "db4ec4313a67688ca9c40d2b1162f50e9c8d52e4ce949765a8bf57f11ca0946e"
+}

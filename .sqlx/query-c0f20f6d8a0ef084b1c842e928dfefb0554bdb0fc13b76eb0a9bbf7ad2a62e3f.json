@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO [user] ([id], [username], [reset_token], [reset_token_expiry]) VALUES (?, ?, ?, DATETIME('now', '+1 hour'))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "c0f20f6d8a0ef084b1c842e928dfefb0554bdb0fc13b76eb0a9bbf7ad2a62e3f"
+}

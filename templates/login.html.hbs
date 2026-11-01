@@ -1,0 +1,18 @@
+{{#*inline "content"}}
+  <main>
+    <h1>Login</h1>
+    <form method="POST">
+      <div class="column">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required>
+      </div>
+      <div class="column">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+      </div>
+      <button style="display: flex; align-items: center; gap: 10px" type="submit"><span class="fas"></span> Login</button>
+    </form>
+  </main>
+{{/inline}}
+
+{{> layout }}

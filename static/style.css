@@ -239,12 +239,6 @@ body {
 	margin: 2rem;
 }
 
-@media (max-width: 600px) {
-	body {
-		margin: 1rem;
-	}
-}
-
 nav {
 	justify-content: space-between;
 	align-items: center;
@@ -275,6 +269,63 @@ a {
 
 a:hover {
 	color: var(--ctp-blue);
+}
+
+main {
+	border-radius: 10px;
+	outline: 1px solid var(--ctp-overlay0);
+	width: fit-content;
+	margin: 25px 0;
+	padding: 15px;
+}
+
+form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+input,
+form > button {
+	width: fit-content;
+}
+
+input[type="text"],
+input[type="password"] {
+	padding: 5px;
+	border-radius: 5px;
+	border: 1px solid var(--ctp-overlay0);
+	background-color: var(--ctp-surface0);
+	width: max(40vw, 400px);
+	font-family: inherit;
+	font-size: inherit;
+	color: inherit;
+}
+
+button {
+	padding: 5px 10px;
+	border-radius: 5px;
+	padding: 5px 10px;
+	border: 1px solid var(--ctp-overlay0);
+	background-color: var(--ctp-surface0);
+	color: var(--ctp-text);
+}
+
+button:hover {
+	background-color: var(--ctp-surface1);
+}
+
+button:active {
+	background-color: var(--ctp-surface2);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	margin: 0 0 20px 0;
 }
 
 .torrent-list {
@@ -328,4 +379,24 @@ a:hover {
 
 .torrent-list .fas {
 	margin-right: 5px;
+}
+
+.column {
+	display: flex;
+	flex-direction: column;
+}
+
+@media (max-width: 600px) {
+	body {
+		margin: 1rem;
+	}
+
+	input[type="text"],
+	input[type="password"] {
+		width: auto;
+	}
+
+	main {
+		width: auto;
+	}
 }
