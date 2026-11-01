@@ -400,3 +400,7 @@ h6 {
 		width: auto;
 	}
 }
+
+.error {
+	color: var(--ctp-red);
+}

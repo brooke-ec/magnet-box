@@ -3,10 +3,10 @@ use rocket::State;
 use rocket_dyn_templates::{Template, context};
 use serde::Serialize;
 
-use crate::{configuration::AppConfiguration, tracking::TorrentLibrary};
+use crate::tracking::TorrentLibrary;
 
 #[get("/")]
-pub(super) async fn list(library: &State<TorrentLibrary>, config: &State<AppConfiguration>) -> Template {
+pub(super) async fn list(library: &State<TorrentLibrary>) -> Template {
     let mut torrents = Vec::<TorrentContext>::with_capacity(library.len());
     library
         .iter_torrents(|torrent| {
@@ -23,7 +23,7 @@ pub(super) async fn list(library: &State<TorrentLibrary>, config: &State<AppConf
         })
         .await;
 
-    Template::render("index", context! { instance_title: &config.instance_title, torrents  })
+    Template::render("index", context! { torrents })
 }
 
 #[derive(Serialize)]
@@ -37,6 +37,6 @@ struct TorrentContext {
 }
 
 #[get("/torrent/<id>")]
-pub(super) async fn torrent(id: &str, config: &State<AppConfiguration>, library: &State<TorrentLibrary>) -> Template {
-    Template::render("torrent", context! { instance_title: &config.instance_title })
+pub(super) async fn torrent(id: &str, library: &State<TorrentLibrary>) -> Template {
+    Template::render("torrent", context! {})
 }

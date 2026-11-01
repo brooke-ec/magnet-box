@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT [id] as \"uuid: Uuid\", [username] FROM [user] WHERE [reset_token] = ? AND [reset_token_expiry] > CURRENT_TIMESTAMP LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "uuid: Uuid",
+        "ordinal": 0,
+        "type_info": "Blob"
+      },
+      {
+        "name": "username",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "8c8011602718bab137015aeb478a955b4f5101b6b1edf427576b2dc795ee7d62"
+}

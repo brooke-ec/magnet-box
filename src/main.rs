@@ -7,7 +7,6 @@ mod tracking;
 
 use rocket::{Config, fairing::AdHoc, fs::FileServer};
 use rocket_db_pools::Database;
-use rocket_dyn_templates::Template;
 use uuid::Uuid;
 
 use crate::{configuration::AppConfiguration, tracking::TorrentLibrary};
@@ -22,6 +21,16 @@ async fn database_init(rocket: rocket::Rocket<rocket::Build>) -> rocket::fairing
         None => return Err(rocket),
     };
 
+    // run migrations
+    match sqlx::migrate!("./migrations").run(&**connection).await {
+        Ok(_) => (),
+        Err(e) => {
+            rocket::error!("Failed to run database migrations: {}", e);
+            return Err(rocket);
+        }
+    }
+
+    // display reset link if no user with a password exists
     if match sqlx::query!("SELECT TRUE FROM [user] WHERE [PASSWORD] IS NOT NULL LIMIT 1")
         .fetch_optional(&**connection)
         .await
@@ -67,14 +76,6 @@ async fn database_init(rocket: rocket::Rocket<rocket::Build>) -> rocket::fairing
         );
     }
 
-    match sqlx::migrate!("./migrations").run(&**connection).await {
-        Ok(_) => (),
-        Err(e) => {
-            rocket::error!("Failed to run database migrations: {}", e);
-            return Err(rocket);
-        }
-    }
-
     Ok(rocket)
 }
 
@@ -82,7 +83,6 @@ async fn database_init(rocket: rocket::Rocket<rocket::Build>) -> rocket::fairing
 async fn main() -> Result<(), rocket::Error> {
     rocket::build()
         .attach(Storage::init())
-        .attach(Template::fairing())
         .attach(AdHoc::try_on_ignite("migrations", database_init))
         .mount("/static", FileServer::from("static"))
         .attach(AdHoc::config::<AppConfiguration>())
