@@ -21,6 +21,47 @@ pub(crate) async fn login() -> Template {
     Template::render("login", context! {})
 }
 
+#[derive(FromForm, Debug, Clone, PartialEq, Eq)]
+pub(crate) struct LoginForm {
+    #[field(name = "username")]
+    password: String,
+    #[field(name = "password")]
+    confirm: String,
+}
+
+#[post("/login", data = "<form>")]
+pub(crate) async fn login_submit(
+    mut db: Connection<Storage>,
+    cookie: &CookieJar<'_>,
+    form: Form<LoginForm>,
+) -> Result<Redirect, (Status, Option<Template>)> {
+    let user = sqlx::query!(
+        "SELECT [id] as \"uuid: Uuid\", [password] FROM [user] WHERE [username] = ? LIMIT 1",
+        form.password
+    )
+    .fetch_optional(&mut **db)
+    .await
+    .map_err(|_| (Status::InternalServerError, None))?
+    .ok_or((
+        Status::Unauthorized,
+        Some(Template::render("login", context! {error: "invalid username or password"})),
+    ))?;
+
+    if password_auth::verify_password(&form.confirm, &user.password.unwrap()).is_err() {
+        return Err((
+            Status::Unauthorized,
+            Some(Template::render("login", context! {error: "invalid username or password"})),
+        ));
+    }
+
+    let token = create_session(db, user.uuid)
+        .await
+        .map_err(|_| (Status::InternalServerError, None))?;
+
+    cookie.add(Cookie::new(SESSION_KEY, token));
+    Ok(Redirect::to(uri!(profile)))
+}
+
 #[get("/profile")]
 pub(crate) async fn profile(user: User) -> Template {
     Template::render("profile", context! {username: user.username})

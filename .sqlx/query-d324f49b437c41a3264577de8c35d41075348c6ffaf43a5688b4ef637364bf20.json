@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT [id] as \"uuid: Uuid\", [password] FROM [user] WHERE [username] = ? LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "uuid: Uuid",
+        "ordinal": 0,
+        "type_info": "Blob"
+      },
+      {
+        "name": "password",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "d324f49b437c41a3264577de8c35d41075348c6ffaf43a5688b4ef637364bf20"
+}
