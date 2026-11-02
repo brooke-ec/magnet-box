@@ -36,7 +36,12 @@ struct TorrentContext {
     url: String,
 }
 
+#[get("/upload")]
+pub(crate) async fn upload(user: UserSession) -> Template {
+    Template::render("upload", context! { user })
+}
+
 #[get("/torrent/<id>")]
-pub(super) async fn torrent(id: &str, library: &State<TorrentLibrary>, user: Option<UserSession>) -> Template {
+pub(crate) async fn torrent(id: &str, library: &State<TorrentLibrary>, user: Option<UserSession>) -> Template {
     Template::render("torrent", context! { user })
 }

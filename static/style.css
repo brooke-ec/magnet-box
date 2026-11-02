@@ -300,7 +300,8 @@ form > button {
 }
 
 input[type="text"],
-input[type="password"] {
+input[type="password"],
+input[type="file"] {
 	padding: 5px;
 	border-radius: 5px;
 	border: 1px solid var(--ctp-overlay0);
@@ -309,6 +310,52 @@ input[type="password"] {
 	font-family: inherit;
 	font-size: inherit;
 	color: inherit;
+}
+
+input[type="file"] {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+.file-drop-box {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	width: min(60vw, 500px);
+	min-height: 180px;
+	padding: 25px;
+	border: 2px dashed var(--ctp-overlay0);
+	border-radius: 10px;
+	background-color: var(--ctp-surface0);
+	text-align: center;
+	cursor: pointer;
+}
+
+.file-drop-box:hover,
+.file-drop-box.is-dragging,
+.file-drop-box:focus-within {
+	border-color: var(--ctp-blue);
+	background-color: var(--ctp-surface1);
+}
+
+.file-drop-icon {
+	font-size: 2em;
+}
+
+.file-drop-title {
+	font-weight: bold;
+}
+
+.file-drop-name,
+.file-drop-status {
+	color: var(--ctp-subtext0);
+	font-size: 0.9em;
 }
 
 button {
@@ -416,7 +463,8 @@ a {
 	}
 
 	input[type="text"],
-	input[type="password"] {
+	input[type="password"],
+	.file-drop-box {
 		width: auto;
 	}
 

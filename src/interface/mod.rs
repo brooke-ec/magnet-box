@@ -1,5 +1,6 @@
 use crate::configuration::AppConfiguration;
 use crate::interface::auth::{change_password, change_password_submit, login_submit, logout, profile};
+use crate::interface::torrents::upload;
 use crate::interface::{
     auth::{login, reset_password, reset_password_link, reset_password_submit},
     torrents::{list, torrent},
@@ -42,12 +43,13 @@ pub(crate) fn faring() -> rocket::fairing::AdHoc {
                 routes![
                     change_password_submit,
                     reset_password_submit,
-                    reset_password,
                     reset_password_link,
                     change_password,
+                    reset_password,
                     login_submit,
                     torrent,
                     profile,
+                    upload,
                     logout,
                     login,
                     list,

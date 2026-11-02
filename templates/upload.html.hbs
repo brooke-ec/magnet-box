@@ -1,0 +1,60 @@
+{{#*inline "content"}}
+  <main>
+    <h1>Upload Torrent</h1>
+    <p>Select a .torrent file to upload, or drop one in the box below.</p>
+    <form method="POST" enctype="multipart/form-data">
+      <label class="file-drop-box" for="torrent-file" id="torrent-drop-box">
+        <span class="fas file-drop-icon"></span>
+        <span class="file-drop-title">Browse or drop a .torrent file</span>
+        <span class="file-drop-name" id="torrent-file-name">No file selected</span>
+        <input type="file" id="torrent-file" name="torrent" accept=".torrent" required>
+      </label>
+      {{#if error}}
+        <div class="error">{{error}}</div>
+      {{/if}}
+      <button style="display: flex; align-items: center; gap: 10px" type="submit"><span class="fas"></span> Upload Torrent</button>
+    </form>
+  </main>
+
+<script>
+  (() => {
+    const input = document.getElementById("torrent-file");
+    const dropBox = document.getElementById("torrent-drop-box");
+    const fileName = document.getElementById("torrent-file-name");
+
+    const showFile = (file) => {
+      const isTorrent = file && file.name.toLowerCase().endsWith(".torrent");
+      input.setCustomValidity(isTorrent ? "" : "Please select a .torrent file.");
+      fileName.textContent = isTorrent ? file.name : "No file selected";
+    };
+
+    input.addEventListener("change", () => showFile(input.files[0]));
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      dropBox.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropBox.classList.add("is-dragging");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+      dropBox.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropBox.classList.remove("is-dragging");
+      });
+    });
+
+    dropBox.addEventListener("drop", (event) => {
+      const file = event.dataTransfer.files[0];
+      if (!file) return;
+
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      input.files = transfer.files;
+      showFile(file);
+    });
+  })();
+</script>
+{{/inline}}
+
+{{> layout }}
