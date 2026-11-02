@@ -278,7 +278,9 @@ button.a.danger:hover {
 	color: var(--ctp-red);
 }
 
-main {
+main,
+.box {
+	display: block;
 	border-radius: 10px;
 	outline: 1px solid var(--ctp-overlay0);
 	width: fit-content;

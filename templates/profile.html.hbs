@@ -1,5 +1,17 @@
 {{#*inline "content"}}
-  <h1>Welcome {{user.username}}</h1>
+  <div>
+    <h1>Welcome {{user.username}}</h1>
+    <p>As a member of this website, you can upload your own torrents to the tracker.</p>
+  </div>
+  <a class="box" href="/upload">
+    <span>Upload Torrent</span>
+    <span class="fas" style="margin-left: 10px;"></span>
+  </a>
+  <br />
+  <a class="box">
+    <span>Change Password</span>
+    <span class="fas" style="margin-left: 10px;"></span>
+  </a>
 {{/inline}}
 
 {{> layout }}

@@ -3,10 +3,10 @@ use rocket::State;
 use rocket_dyn_templates::{Template, context};
 use serde::Serialize;
 
-use crate::tracking::TorrentLibrary;
+use crate::{interface::auth::UserSession, tracking::TorrentLibrary};
 
 #[get("/")]
-pub(super) async fn list(library: &State<TorrentLibrary>) -> Template {
+pub(super) async fn list(library: &State<TorrentLibrary>, user: Option<UserSession>) -> Template {
     let mut torrents = Vec::<TorrentContext>::with_capacity(library.len());
     library
         .iter_torrents(|torrent| {
@@ -23,7 +23,7 @@ pub(super) async fn list(library: &State<TorrentLibrary>) -> Template {
         })
         .await;
 
-    Template::render("index", context! { torrents })
+    Template::render("index", context! { user, torrents })
 }
 
 #[derive(Serialize)]
@@ -37,6 +37,6 @@ struct TorrentContext {
 }
 
 #[get("/torrent/<id>")]
-pub(super) async fn torrent(id: &str, library: &State<TorrentLibrary>) -> Template {
-    Template::render("torrent", context! {})
+pub(super) async fn torrent(id: &str, library: &State<TorrentLibrary>, user: Option<UserSession>) -> Template {
+    Template::render("torrent", context! { user })
 }

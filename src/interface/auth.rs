@@ -18,8 +18,8 @@ const SESSION_KEY: &str = "session-token";
 const COOKIE_KEY: &str = "reset-token";
 
 #[get("/login")]
-pub(crate) async fn login() -> Template {
-    Template::render("login", context! {})
+pub(crate) async fn login(user: Option<UserSession>) -> Template {
+    Template::render("login", context! { user })
 }
 
 #[derive(FromForm, Debug, Clone, PartialEq, Eq)]
@@ -35,7 +35,12 @@ pub(crate) async fn login_submit(
     mut db: Connection<Storage>,
     cookie: &CookieJar<'_>,
     form: Form<LoginForm>,
+    user: Option<UserSession>,
 ) -> Result<Redirect, (Status, Option<Template>)> {
+    if user.is_some() {
+        return Ok(Redirect::to(uri!(profile)));
+    }
+
     let user = sqlx::query!(
         "SELECT [id] as \"uuid: Uuid\", [password] FROM [user] WHERE [username] = ? LIMIT 1",
         form.password
@@ -45,13 +50,13 @@ pub(crate) async fn login_submit(
     .map_err(|_| (Status::InternalServerError, None))?
     .ok_or((
         Status::Unauthorized,
-        Some(Template::render("login", context! {error: "invalid username or password"})),
+        Some(Template::render("login", context! { error: "invalid username or password" })),
     ))?;
 
     if password_auth::verify_password(&form.confirm, &user.password.unwrap()).is_err() {
         return Err((
             Status::Unauthorized,
-            Some(Template::render("login", context! {error: "invalid username or password"})),
+            Some(Template::render("login", context! { error: "invalid username or password" })),
         ));
     }
 
@@ -71,7 +76,7 @@ pub(crate) async fn logout(mut db: Connection<Storage>, cookie: &CookieJar<'_>, 
         .map_err(|_| Status::InternalServerError)?;
 
     cookie.remove(SESSION_KEY);
-    Ok(Template::render("logout", context! {}))
+    Ok(Template::render("logout", context! { user }))
 }
 
 #[get("/profile")]
@@ -83,6 +88,7 @@ pub(crate) async fn profile(user: UserSession) -> Template {
 pub(crate) async fn password_reset(
     mut db: Connection<Storage>,
     cookie: &CookieJar<'_>,
+    user: Option<UserSession>,
 ) -> Result<Template, (Status, Option<&'static str>)> {
     let token = cookie
         .get(COOKIE_KEY)
@@ -99,7 +105,7 @@ pub(crate) async fn password_reset(
     .ok_or((Status::Gone, Some("password reset token is invalid")))?
     .username;
 
-    Ok(Template::render("password", context! { username }))
+    Ok(Template::render("password", context! { user, username }))
 }
 
 #[derive(FromForm, Debug, Clone, PartialEq, Eq)]
@@ -115,6 +121,7 @@ pub(crate) async fn password_submit(
     mut db: Connection<Storage>,
     cookie: &CookieJar<'_>,
     form: Form<PasswordForm>,
+    user_session: Option<UserSession>,
 ) -> Result<Redirect, (Status, Option<Either<Template, &'static str>>)> {
     let token = cookie
         .get(COOKIE_KEY)
@@ -135,7 +142,7 @@ pub(crate) async fn password_submit(
             Status::BadRequest,
             Some(Either::Left(Template::render(
                 "password",
-                context! { username: user.username, error: "Passwords do not match" },
+                context! { user: user_session, username: user.username, error: "Passwords do not match" },
             ))),
         ));
     }
@@ -145,7 +152,7 @@ pub(crate) async fn password_submit(
             Status::BadRequest,
             Some(Either::Left(Template::render(
                 "password",
-                context! { username: user.username, error: "Password must be at least 8 characters long" },
+                context! { user: user_session, username: user.username, error: "Password must be at least 8 characters long" },
             ))),
         ));
     }
