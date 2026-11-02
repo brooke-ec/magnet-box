@@ -8,6 +8,7 @@ use rocket::{
 };
 use rocket_db_pools::Connection;
 use rocket_dyn_templates::{Template, context};
+use serde::Serialize;
 use sqlx::{prelude::FromRow, query};
 use uuid::Uuid;
 
@@ -62,9 +63,20 @@ pub(crate) async fn login_submit(
     Ok(Redirect::to(uri!(profile)))
 }
 
+#[post("/logout")]
+pub(crate) async fn logout(mut db: Connection<Storage>, cookie: &CookieJar<'_>, user: UserSession) -> Result<Template, Status> {
+    sqlx::query!("DELETE FROM [session] WHERE [token] = ?", user.session)
+        .execute(&mut **db)
+        .await
+        .map_err(|_| Status::InternalServerError)?;
+
+    cookie.remove(SESSION_KEY);
+    Ok(Template::render("logout", context! {}))
+}
+
 #[get("/profile")]
-pub(crate) async fn profile(user: User) -> Template {
-    Template::render("profile", context! {username: user.username})
+pub(crate) async fn profile(user: UserSession) -> Template {
+    Template::render("profile", context! {user})
 }
 
 #[get("/reset-password")]
@@ -183,14 +195,15 @@ pub(crate) async fn create_session(mut db: Connection<Storage>, user_id: Uuid) -
     Ok(token)
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, FromRow)]
-pub(crate) struct User {
+#[derive(Debug, Clone, PartialEq, Eq, FromRow, Serialize)]
+pub(crate) struct UserSession {
     id: Uuid,
+    session: String,
     username: String,
 }
 
 #[rocket::async_trait]
-impl<'r> FromRequest<'r> for User {
+impl<'r> FromRequest<'r> for UserSession {
     type Error = Option<Redirect>;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
@@ -206,9 +219,9 @@ impl<'r> FromRequest<'r> for User {
             Outcome::Success(db) => db,
         };
 
-        let user = match sqlx::query_as!(
-            User,
-            "SELECT [user].[id] as \"id: Uuid\", [user].[username] FROM [user] INNER JOIN [session] ON [session].[user_id] = [user].[id] WHERE [session].[token] = ? AND [session].[expiry] > CURRENT_TIMESTAMP LIMIT 1",
+        let mut user = match sqlx::query_as!(
+            UserSession,
+            "SELECT [user].[id] as \"id: Uuid\", [user].[username], [session].[token] as [session] FROM [user] INNER JOIN [session] ON [session].[user_id] = [user].[id] WHERE [session].[token] = ? AND [session].[expiry] > CURRENT_TIMESTAMP LIMIT 1",
             token
         )
         .fetch_optional(&mut **db)
@@ -219,6 +232,7 @@ impl<'r> FromRequest<'r> for User {
             Err(_) => return Outcome::Error((Status::InternalServerError, None)),
         };
 
+        user.session = token.to_string();
         Outcome::Success(user)
     }
 }

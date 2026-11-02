@@ -246,42 +246,49 @@ nav {
 	display: flex;
 }
 
-nav > .nav-links {
+.nav-links {
 	align-items: center;
 	display: flex;
 }
 
-nav > .nav-links > a {
+.nav-links .link {
 	aspect-ratio: 1/1;
 	font-size: 20px;
-	padding: 5px;
+	padding: 5px 12px;
 }
 
 nav > .title {
 	font-size: 30px;
 }
 
-a {
+a,
+button.a {
 	transition: color 125ms ease-in-out;
 	color: var(--ctp-text);
 	text-decoration: none;
 }
 
-a:hover {
+a:hover,
+button.a:hover {
 	color: var(--ctp-blue);
+}
+
+a.danger:hover,
+button.a.danger:hover {
+	color: var(--ctp-red);
 }
 
 main {
 	border-radius: 10px;
 	outline: 1px solid var(--ctp-overlay0);
 	width: fit-content;
-	margin: 25px 0;
 	padding: 15px;
 }
 
 form {
 	display: flex;
 	flex-direction: column;
+	margin: 0;
 	gap: 20px;
 }
 
@@ -303,19 +310,26 @@ input[type="password"] {
 }
 
 button {
+	background: none;
+	border: none;
+	font-size: inherit;
+	font-family: inherit;
+}
+
+button:not(.a) {
 	padding: 5px 10px;
 	border-radius: 5px;
 	padding: 5px 10px;
 	border: 1px solid var(--ctp-overlay0);
 	background-color: var(--ctp-surface0);
-	color: var(--ctp-text);
+	color: inherit;
 }
 
-button:hover {
+button:not(.a):hover {
 	background-color: var(--ctp-surface1);
 }
 
-button:active {
+button:not(.a):active {
 	background-color: var(--ctp-surface2);
 }
 
@@ -328,12 +342,20 @@ h6 {
 	margin: 0 0 20px 0;
 }
 
+body > :nth-child(2) {
+	margin: 25px 0;
+}
+
+button,
+a {
+	cursor: pointer;
+}
+
 .torrent-list {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) fit-content(100%) fit-content(100%) fit-content(100%);
 	border-radius: 10px;
 	width: 100%;
-	margin: 25px 0;
 	font-size: 0.9em;
 	font-family: sans-serif;
 	min-width: 400px;

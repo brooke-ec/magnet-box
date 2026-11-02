@@ -3,13 +3,15 @@
 	<div class="nav-links">
 		{{#if user}}
 			{{#if user.is_admin}}
-				<a href="/admin" class="fas"></a>
+				<a href="/admin" class="fas link"></a>
 			{{/if}}
-			<a href="/upload" class="fas"></a>
-			<a href="/profile" class="fas"></a>
-			<a href="/logout" class="fas"></a>
+			<a href="/upload" class="fas link"></a>
+			<a href="/profile" class="fas link"></a>
+			<form action="/logout" method="POST" style="display: inline;">
+				<button type="submit" class="fas link a danger"></button>
+			</form>
 		{{else}}
-			<a href="/login" class="fas"></a>
+			<a href="/login" class="fas link"></a>
 		{{/if}}
 	</div>
 </nav>

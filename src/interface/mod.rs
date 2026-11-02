@@ -1,5 +1,5 @@
 use crate::configuration::AppConfiguration;
-use crate::interface::auth::{login_submit, profile};
+use crate::interface::auth::{login_submit, logout, profile};
 use crate::interface::{
     auth::{login, password_link, password_reset, password_submit},
     torrents::{list, torrent},
@@ -46,6 +46,7 @@ pub(crate) fn faring() -> rocket::fairing::AdHoc {
                     login_submit,
                     torrent,
                     profile,
+                    logout,
                     login,
                     list,
                 ],
