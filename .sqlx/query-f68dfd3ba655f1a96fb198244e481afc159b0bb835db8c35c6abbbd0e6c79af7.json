@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT [password] FROM [user] WHERE [id] = ? LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "password",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "f68dfd3ba655f1a96fb198244e481afc159b0bb835db8c35c6abbbd0e6c79af7"
+}
