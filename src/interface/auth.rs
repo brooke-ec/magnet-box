@@ -15,8 +15,8 @@ use uuid::Uuid;
 
 use crate::{Storage, interface::Either};
 
-const SESSION_KEY: &str = "session-token";
-const COOKIE_KEY: &str = "reset-token";
+const SESSION_COOKIE: &str = "session-token";
+const RESET_COOKIE: &str = "reset-token";
 
 #[get("/login")]
 pub(crate) async fn login(user: Option<UserSession>) -> Template {
@@ -74,7 +74,7 @@ pub(crate) async fn login_submit(
 
 #[post("/logout")]
 pub(crate) async fn logout(cookie: &CookieJar<'_>, user: UserSession) -> Result<Template, Status> {
-    cookie.remove_private(SESSION_KEY);
+    cookie.remove_private(SESSION_COOKIE);
     Ok(Template::render("logout", context! { user }))
 }
 
@@ -90,7 +90,7 @@ pub(crate) async fn password_reset(
     user: Option<UserSession>,
 ) -> Result<Template, (Status, Option<&'static str>)> {
     let token = cookie
-        .get(COOKIE_KEY)
+        .get(RESET_COOKIE)
         .ok_or((Status::BadRequest, Some("password reset token is invalid")))?
         .value();
 
@@ -123,7 +123,7 @@ pub(crate) async fn password_submit(
     user_session: Option<UserSession>,
 ) -> Result<Redirect, (Status, Option<Either<Template, &'static str>>)> {
     let token = cookie
-        .get(COOKIE_KEY)
+        .get(RESET_COOKIE)
         .ok_or((Status::BadRequest, Some(Either::Right("password reset token is invalid"))))?
         .value();
 
@@ -168,13 +168,14 @@ pub(crate) async fn password_submit(
     .map_err(|_| (Status::InternalServerError, None))?;
 
     cookie.add_private(session_cookie(user.uuid));
+    cookie.remove(RESET_COOKIE);
 
     Ok(Redirect::to(uri!(profile)))
 }
 
 #[get("/reset-password/<token>")]
 pub(crate) async fn password_link(token: &str, cookies: &CookieJar<'_>) -> Redirect {
-    cookies.add(Cookie::new(COOKIE_KEY, token.to_string()));
+    cookies.add(Cookie::new(RESET_COOKIE, token.to_string()));
     Redirect::to(uri!(password_reset))
 }
 
@@ -192,7 +193,7 @@ struct Session {
 
 fn session_cookie(user_id: Uuid) -> Cookie<'static> {
     Cookie::build((
-        SESSION_KEY,
+        SESSION_COOKIE,
         serde_json::to_string(&Session {
             expiry: chrono::Utc::now() + chrono::Duration::days(1),
             user_id,
@@ -216,7 +217,7 @@ impl<'r> FromRequest<'r> for UserSession {
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let cookies = req.cookies();
         let session = match cookies
-            .get_private(SESSION_KEY)
+            .get_private(SESSION_COOKIE)
             .and_then(|cookie| serde_json::from_str::<Session>(cookie.value()).ok())
         {
             None => return Outcome::Error((Status::Unauthorized, Some(Redirect::to(uri!(login))))),
