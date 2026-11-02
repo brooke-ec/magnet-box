@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT [id] as \"id: Uuid\", [username] FROM [user] WHERE [id] = ? LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "id: Uuid",
+        "ordinal": 0,
+        "type_info": "Blob"
+      },
+      {
+        "name": "username",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "46ae515aba9945001b60630614006b3ce8232c2b7e1ecdae5f03fa973d1194c0"
+}

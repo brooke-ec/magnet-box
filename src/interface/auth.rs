@@ -1,5 +1,6 @@
 use password_auth::generate_hash;
 use rand::{RngExt, distr::Alphanumeric};
+use rocket::time::Duration;
 use rocket::{
     form::Form,
     http::{Cookie, CookieJar, Status},
@@ -8,8 +9,8 @@ use rocket::{
 };
 use rocket_db_pools::Connection;
 use rocket_dyn_templates::{Template, context};
-use serde::Serialize;
-use sqlx::{prelude::FromRow, query};
+use serde::{Deserialize, Serialize};
+use sqlx::{FromRow, query};
 use uuid::Uuid;
 
 use crate::{Storage, interface::Either};
@@ -53,29 +54,27 @@ pub(crate) async fn login_submit(
         Some(Template::render("login", context! { error: "invalid username or password" })),
     ))?;
 
-    if password_auth::verify_password(&form.confirm, &user.password.unwrap()).is_err() {
+    if let Some(password) = user.password {
+        if password_auth::verify_password(&form.confirm, &password).is_err() {
+            return Err((
+                Status::Unauthorized,
+                Some(Template::render("login", context! { error: "invalid username or password" })),
+            ));
+        }
+    } else {
         return Err((
             Status::Unauthorized,
             Some(Template::render("login", context! { error: "invalid username or password" })),
         ));
     }
 
-    let token = create_session(db, user.uuid)
-        .await
-        .map_err(|_| (Status::InternalServerError, None))?;
-
-    cookie.add(Cookie::new(SESSION_KEY, token));
+    cookie.add_private(session_cookie(user.uuid));
     Ok(Redirect::to(uri!(profile)))
 }
 
 #[post("/logout")]
-pub(crate) async fn logout(mut db: Connection<Storage>, cookie: &CookieJar<'_>, user: UserSession) -> Result<Template, Status> {
-    sqlx::query!("DELETE FROM [session] WHERE [token] = ?", user.session)
-        .execute(&mut **db)
-        .await
-        .map_err(|_| Status::InternalServerError)?;
-
-    cookie.remove(SESSION_KEY);
+pub(crate) async fn logout(cookie: &CookieJar<'_>, user: UserSession) -> Result<Template, Status> {
+    cookie.remove_private(SESSION_KEY);
     Ok(Template::render("logout", context! { user }))
 }
 
@@ -168,12 +167,7 @@ pub(crate) async fn password_submit(
     .await
     .map_err(|_| (Status::InternalServerError, None))?;
 
-    cookie.add(Cookie::new(
-        SESSION_KEY,
-        create_session(db, user.uuid)
-            .await
-            .map_err(|_| (Status::InternalServerError, None))?,
-    ));
+    cookie.add_private(session_cookie(user.uuid));
 
     Ok(Redirect::to(uri!(profile)))
 }
@@ -188,24 +182,30 @@ fn generate_token() -> String {
     rand::rng().sample_iter(&Alphanumeric).take(32).map(char::from).collect::<String>()
 }
 
-pub(crate) async fn create_session(mut db: Connection<Storage>, user_id: Uuid) -> Result<String, sqlx::Error> {
-    let token = generate_token();
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct Session {
+    #[serde(rename = "exp")]
+    expiry: chrono::DateTime<chrono::Utc>,
+    #[serde(rename = "uid")]
+    user_id: Uuid,
+}
 
-    query!(
-        "INSERT INTO [session] ([token], [user_id], [expiry]) VALUES (?, ?, DATETIME('now', '+1 hour'))",
-        token,
-        user_id
-    )
-    .execute(&mut **db)
-    .await?;
-
-    Ok(token)
+fn session_cookie(user_id: Uuid) -> Cookie<'static> {
+    Cookie::build((
+        SESSION_KEY,
+        serde_json::to_string(&Session {
+            expiry: chrono::Utc::now() + chrono::Duration::days(1),
+            user_id,
+        })
+        .unwrap(),
+    ))
+    .max_age(Duration::days(1))
+    .build()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, FromRow, Serialize)]
 pub(crate) struct UserSession {
     id: Uuid,
-    session: String,
     username: String,
 }
 
@@ -215,10 +215,17 @@ impl<'r> FromRequest<'r> for UserSession {
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let cookies = req.cookies();
-        let token = match cookies.get(SESSION_KEY) {
+        let session = match cookies
+            .get_private(SESSION_KEY)
+            .and_then(|cookie| serde_json::from_str::<Session>(cookie.value()).ok())
+        {
             None => return Outcome::Error((Status::Unauthorized, Some(Redirect::to(uri!(login))))),
-            Some(cookie) => cookie.value(),
+            Some(user_id) => user_id,
         };
+
+        if session.expiry < chrono::Utc::now() {
+            return Outcome::Error((Status::Unauthorized, Some(Redirect::to(uri!(login)))));
+        }
 
         let mut db = match req.guard::<Connection<Storage>>().await {
             Outcome::Forward(_) => return Outcome::Error((Status::InternalServerError, None)),
@@ -226,10 +233,10 @@ impl<'r> FromRequest<'r> for UserSession {
             Outcome::Success(db) => db,
         };
 
-        let mut user = match sqlx::query_as!(
+        let user = match sqlx::query_as!(
             UserSession,
-            "SELECT [user].[id] as \"id: Uuid\", [user].[username], [session].[token] as [session] FROM [user] INNER JOIN [session] ON [session].[user_id] = [user].[id] WHERE [session].[token] = ? AND [session].[expiry] > CURRENT_TIMESTAMP LIMIT 1",
-            token
+            "SELECT [id] as \"id: Uuid\", [username] FROM [user] WHERE [id] = ? LIMIT 1",
+            session.user_id
         )
         .fetch_optional(&mut **db)
         .await
@@ -239,7 +246,6 @@ impl<'r> FromRequest<'r> for UserSession {
             Err(_) => return Outcome::Error((Status::InternalServerError, None)),
         };
 
-        user.session = token.to_string();
         Outcome::Success(user)
     }
 }

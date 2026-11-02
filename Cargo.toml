@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-chrono = "0.4.45"
+chrono = { version = "0.4.45", features = ["serde"] }
 percent-encoding = "2.3.2"
-rocket = "0.5.2"
+rocket = { version = "0.5.2", features = ["secrets"] }
 rocket_db_pools = { version = "0.2.0", features = ["sqlx_sqlite"] }
 rocket_dyn_templates = { version = "0.2.0", features = ["handlebars"] }
 scc = "3.8.8"
