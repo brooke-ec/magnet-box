@@ -9,6 +9,7 @@ use crate::configuration::AppConfiguration;
 mod announce;
 mod library;
 
+pub(crate) use library::InfoHash;
 pub(crate) use library::TorrentLibrary;
 
 use announce::announce_endpoint;

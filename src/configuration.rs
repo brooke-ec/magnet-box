@@ -12,6 +12,10 @@ pub(crate) struct AppConfiguration {
     #[serde_inline_default(50)]
     pub(crate) numwant: usize,
 
+    /// The title of the instance, which will be displayed in the web interface.
     #[serde_inline_default("Magnet Box".to_string())]
     pub(crate) instance_title: String,
+
+    /// The URL of the instance used for validating uploads.
+    pub(crate) url: String,
 }

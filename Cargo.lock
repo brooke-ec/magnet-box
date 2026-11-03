@@ -207,12 +207,25 @@ dependencies = [
 ]
 
 [[package]]
-name = "btoi"
-version = "0.4.3"
+name = "borrow-or-share"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dd6407f73a9b8b6162d8a2ef999fe6afd7cc15902ebf42c5cd296addf17e0ad"
+checksum = "dc0b364ead1874514c8c2855ab558056ebfeb775653e7ae45ff72f28f8f3166c"
+
+[[package]]
+name = "bswap"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3acc5ce9c60e68df21b877f13f908ef95c89f01cb6c656cf76ba95f10bc72f5"
+
+[[package]]
+name = "bt_bencode"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6398febbe0d54acd58256692c7d0608c0f49741ec830af6918129d6348f5c4bd"
 dependencies = [
- "num-traits",
+ "itoa",
+ "serde",
 ]
 
 [[package]]
@@ -607,6 +620,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c66915cc5391097de7a2b0b972e8505aa33c0df401fd3a6811dbdb32881ba48"
 
 [[package]]
+name = "fluent-uri"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc74ac4d8359ae70623506d512209619e5cf8f347124910440dbc221714b328e"
+dependencies = [
+ "borrow-or-share",
+ "ref-cast",
+ "serde",
+]
+
+[[package]]
 name = "flume"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -881,6 +905,20 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "hightorrent"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47427359411eab613e38d102e22c335560af3b539c7b14dec9a1007a7cdbc2f8"
+dependencies = [
+ "bt_bencode",
+ "fluent-uri",
+ "rustc-hex",
+ "serde",
+ "sha1",
+ "sha256",
+]
 
 [[package]]
 name = "hkdf"
@@ -1388,7 +1426,9 @@ dependencies = [
 name = "magnet-box"
 version = "0.1.0"
 dependencies = [
+ "bt_bencode",
  "chrono",
+ "hightorrent",
  "humansize",
  "indexmap",
  "password-auth",
@@ -1401,9 +1441,9 @@ dependencies = [
  "serde",
  "serde-inline-default",
  "serde-querystring",
- "serde_bencoded",
  "serde_bytes",
  "serde_json",
+ "sha",
  "sqlx",
  "uuid",
 ]
@@ -2171,6 +2211,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustc-hex"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e75f6a532d0fd9f7f13144f392b6ad56a32696bfcd9c78f797f16bbb6f072d6"
+
+[[package]]
 name = "rustix"
 version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2307,17 +2353,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_bencoded"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b1994b2822ca8af9751ec32b3e465a82d4899b404661737c78cb1e134b98fb9"
-dependencies = [
- "btoi",
- "itoa",
- "serde",
-]
-
-[[package]]
 name = "serde_bytes"
 version = "0.11.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2370,6 +2405,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4208d5a903276a9f3b797afdf6c5bc12a8da1344b053b100abf3565ecc80cb7e"
+dependencies = [
+ "bswap",
+]
+
+[[package]]
 name = "sha1"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2389,6 +2433,19 @@ dependencies = [
  "cfg-if",
  "cpufeatures 0.2.17",
  "digest",
+]
+
+[[package]]
+name = "sha256"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f880fc8562bdeb709793f00eb42a2ad0e672c4f883bbe59122b926eca935c8f6"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "hex",
+ "sha2",
+ "tokio",
 ]
 
 [[package]]

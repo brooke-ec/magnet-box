@@ -5,11 +5,14 @@ mod configuration;
 mod interface;
 mod tracking;
 
-use rocket::{Config, fairing::AdHoc, fs::FileServer};
+use rocket::{Config, fairing::AdHoc, fs::FileServer, futures::future::try_join_all};
 use rocket_db_pools::Database;
 use uuid::Uuid;
 
-use crate::{configuration::AppConfiguration, tracking::TorrentLibrary};
+use crate::{
+    configuration::AppConfiguration,
+    tracking::{InfoHash, TorrentLibrary},
+};
 
 #[derive(Database)]
 #[database("storage")]
@@ -75,6 +78,47 @@ async fn database_init(rocket: rocket::Rocket<rocket::Build>) -> rocket::fairing
             uri!(crate::interface::auth::reset_password_link(token))
         );
     }
+
+    // load torrent library
+    let library = match rocket.state::<TorrentLibrary>() {
+        Some(library) => library,
+        None => {
+            rocket::error!("Failed to get torrent library state");
+            return Err(rocket);
+        }
+    };
+
+    match sqlx::query!("SELECT [id] as \"id: Uuid\", [v1_hash], [v2_hash], [name], [size], [date] FROM [torrent]")
+        .fetch_all(&**connection)
+        .await
+    {
+        Ok(records) => {
+            match try_join_all(records.into_iter().map(async |record| {
+                library
+                    .add(
+                        record.id,
+                        record.v1_hash.map(|h| InfoHash::try_from(&h[..20]).unwrap()),
+                        record.v2_hash.map(|h| InfoHash::try_from(&h[..20]).unwrap()),
+                        record.name,
+                        record.size as u64,
+                        record.date.and_utc(),
+                    )
+                    .await
+            }))
+            .await
+            {
+                Ok(_) => (),
+                Err(_) => {
+                    rocket::error!("Failed to load torrents");
+                    return Err(rocket);
+                }
+            }
+        }
+        Err(error) => {
+            rocket::error!("Failed to load torrents: {}", error);
+            return Err(rocket);
+        }
+    };
 
     Ok(rocket)
 }

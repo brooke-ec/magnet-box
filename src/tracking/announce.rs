@@ -130,7 +130,7 @@ pub(super) struct Bencode<T>(T);
 
 impl<'r, T: Serialize> Responder<'r, 'static> for Bencode<T> {
     fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
-        let bytes = serde_bencoded::to_vec(&self.0).map_err(|e| {
+        let bytes = bt_bencode::to_vec(&self.0).map_err(|e| {
             eprintln!("Failed to serialize to bencode: {}", e);
             Status::InternalServerError
         })?;

@@ -93,7 +93,10 @@ pub(crate) async fn change_password_submit(
         .execute(&mut **db)
         .await
     {
-        Err(_) => return (Status::InternalServerError, None),
+        Err(e) => {
+            rocket::error!("Failed to update password: {:?}", e);
+            return (Status::InternalServerError, None);
+        }
         Ok(_) => (),
     }
 
@@ -136,7 +139,10 @@ pub(crate) async fn login_submit(
     )
     .fetch_optional(&mut **db)
     .await
-    .map_err(|_| (Status::InternalServerError, None))?
+    .map_err(|e| {
+        rocket::error!("Failed to fetch user during login: {:?}", e);
+        (Status::InternalServerError, None)
+    })?
     .ok_or((
         Status::Unauthorized,
         Some(Template::render("login", context! { error: "invalid username or password" })),
@@ -191,7 +197,10 @@ pub(crate) async fn reset_password(
     )
     .fetch_optional(&mut **db)
     .await
-    .map_err(|_| (Status::InternalServerError, None))?
+    .map_err(|e| {
+        rocket::error!("Failed to fetch username for password reset: {:?}", e);
+        (Status::InternalServerError, None)
+    })?
     .ok_or((Status::Gone, Some("password reset token is invalid")))?
     .username;
 
@@ -224,7 +233,10 @@ pub(crate) async fn reset_password_submit(
     )
     .fetch_optional(&mut **db)
     .await
-    .map_err(|_| (Status::InternalServerError, None))?
+    .map_err(|e| {
+        rocket::error!("Failed to fetch user for password reset: {:?}", e);
+        (Status::InternalServerError, None)
+    })?
     .ok_or((Status::Gone, Some(Either::Right("password reset token is invalid"))))?;
 
     if form.password != form.confirm {
@@ -256,7 +268,10 @@ pub(crate) async fn reset_password_submit(
     )
     .execute(&mut **db)
     .await
-    .map_err(|_| (Status::InternalServerError, None))?;
+    .map_err(|e| {
+        rocket::error!("Failed to update password during reset: {:?}", e);
+        (Status::InternalServerError, None)
+    })?;
 
     cookie.add_private(session_cookie(user.uuid));
     cookie.remove(RESET_COOKIE);
@@ -297,8 +312,8 @@ fn session_cookie(user_id: Uuid) -> Cookie<'static> {
 
 #[derive(Debug, Clone, PartialEq, Eq, FromRow, Serialize)]
 pub(crate) struct UserSession {
-    id: Uuid,
-    username: String,
+    pub(crate) id: Uuid,
+    pub(crate) username: String,
 }
 
 #[rocket::async_trait]
@@ -320,8 +335,14 @@ impl<'r> FromRequest<'r> for UserSession {
         }
 
         let mut db = match req.guard::<Connection<Storage>>().await {
-            Outcome::Forward(_) => return Outcome::Error((Status::InternalServerError, None)),
-            Outcome::Error(_) => return Outcome::Error((Status::InternalServerError, None)),
+            Outcome::Forward(_) => {
+                rocket::error!("Database connection type mismatch");
+                return Outcome::Error((Status::InternalServerError, None));
+            }
+            Outcome::Error(_) => {
+                rocket::error!("Failed to acquire database connection");
+                return Outcome::Error((Status::InternalServerError, None));
+            }
             Outcome::Success(db) => db,
         };
 
@@ -335,7 +356,10 @@ impl<'r> FromRequest<'r> for UserSession {
         {
             Ok(Some(user)) => user,
             Ok(None) => return Outcome::Error((Status::Unauthorized, Some(Redirect::to(uri!(login))))),
-            Err(_) => return Outcome::Error((Status::InternalServerError, None)),
+            Err(e) => {
+                rocket::error!("Failed to fetch user session: {:?}", e);
+                return Outcome::Error((Status::InternalServerError, None));
+            }
         };
 
         Outcome::Success(user)

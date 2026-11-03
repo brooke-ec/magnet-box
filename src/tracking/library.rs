@@ -4,7 +4,7 @@ use scc::hash_map::OccupiedEntry;
 use std::{collections::hash_map::RandomState, net::IpAddr, sync::Arc};
 use uuid::Uuid;
 
-type InfoHash = [u8; 20];
+pub(crate) type InfoHash = [u8; 20];
 
 #[derive(Clone)]
 pub(crate) struct TorrentLibrary(Arc<InnerTorrentLibrary>);
@@ -16,61 +16,91 @@ struct InnerTorrentLibrary {
 
 impl TorrentLibrary {
     pub(crate) async fn new() -> Self {
-        let mut library = Self(Arc::new(InnerTorrentLibrary {
+        let library = Self(Arc::new(InnerTorrentLibrary {
             torrents: scc::HashMap::new(),
             swarms: scc::HashMap::new(),
         }));
 
         library
-            .add(Torrent {
-                date: Utc::now(),
-                v1_hash: [
+            .add(
+                Uuid::new_v4(),
+                Some([
                     0x66, 0x79, 0x55, 0x0d, 0x75, 0x4d, 0x4d, 0xbc, 0x56, 0xdb, 0x6f, 0x6b, 0x34, 0x65, 0xdb, 0x29, 0xc0, 0x86, 0x99, 0x24,
-                ],
-                v2_hash: [
+                ]),
+                Some([
                     0x11, 0xfc, 0x61, 0x36, 0x2a, 0xbd, 0x3a, 0x20, 0xf8, 0xf9, 0x7d, 0x1a, 0x0a, 0x9a, 0xed, 0x69, 0x47, 0x1e, 0x12, 0x99,
-                ],
-                leechers: 0,
-                seeders: 0,
-                name: "Test Torrent".to_string(),
-                size: 1024,
-                id: Uuid::new_v4(),
-            })
+                ]),
+                "Test Torrent".to_string(),
+                1024,
+                Utc::now(),
+            )
             .await
             .unwrap();
 
         library
     }
 
-    pub(crate) async fn add(&mut self, torrent: Torrent) -> Result<(), ()> {
+    pub(crate) async fn add(
+        &self,
+        id: Uuid,
+        v1_hash: Option<InfoHash>,
+        v2_hash: Option<InfoHash>,
+        name: String,
+        size: u64,
+        date: DateTime<Utc>,
+    ) -> Result<(), ()> {
         try_join!(
             async {
-                self.0
-                    .swarms
-                    .insert_async(
-                        torrent.v1_hash,
-                        Swarm {
-                            peers: indexmap::IndexMap::new(),
-                            torrent: torrent.id,
-                        },
-                    )
-                    .await
-                    .map_err(|_| ())
+                if let Some(v1_hash) = v1_hash {
+                    self.0
+                        .swarms
+                        .insert_async(
+                            v1_hash,
+                            Swarm {
+                                peers: indexmap::IndexMap::new(),
+                                torrent: id,
+                            },
+                        )
+                        .await
+                        .map_err(|_| ())
+                } else {
+                    Ok(())
+                }
+            },
+            async {
+                if let Some(v2_hash) = v2_hash {
+                    self.0
+                        .swarms
+                        .insert_async(
+                            v2_hash,
+                            Swarm {
+                                peers: indexmap::IndexMap::new(),
+                                torrent: id,
+                            },
+                        )
+                        .await
+                        .map_err(|_| ())
+                } else {
+                    Ok(())
+                }
             },
             async {
                 self.0
-                    .swarms
+                    .torrents
                     .insert_async(
-                        torrent.v2_hash,
-                        Swarm {
-                            peers: indexmap::IndexMap::new(),
-                            torrent: torrent.id,
+                        id,
+                        Torrent {
+                            leechers: 0,
+                            seeders: 0,
+                            date,
+                            name,
+                            size,
+                            id,
                         },
                     )
                     .await
                     .map_err(|_| ())
-            },
-            async { self.0.torrents.insert_async(torrent.id, torrent.clone()).await.map_err(|_| ()) }
+            }
         )
         .map(|_| ())
     }
@@ -110,8 +140,6 @@ impl TorrentLibrary {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) struct Torrent {
     pub(crate) date: chrono::DateTime<chrono::Utc>,
-    pub(crate) v1_hash: InfoHash,
-    pub(crate) v2_hash: InfoHash,
     pub(crate) leechers: usize,
     pub(crate) seeders: usize,
     pub(crate) name: String,
