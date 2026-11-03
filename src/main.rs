@@ -5,12 +5,13 @@ mod configuration;
 mod interface;
 mod tracking;
 
-use rocket::{Config, fairing::AdHoc, fs::FileServer, futures::future::try_join_all};
+use rocket::{Config, Request, fairing::AdHoc, fs::FileServer, futures::future::try_join_all, http::Cookie, response::Redirect};
 use rocket_db_pools::Database;
 use uuid::Uuid;
 
 use crate::{
     configuration::AppConfiguration,
+    interface::{Either, auth::RETURN_COOKIE},
     tracking::{InfoHash, TorrentLibrary},
 };
 
@@ -123,6 +124,16 @@ async fn database_init(rocket: rocket::Rocket<rocket::Build>) -> rocket::fairing
     Ok(rocket)
 }
 
+#[catch(401)]
+fn unauthorized(request: &Request<'_>) -> Either<Redirect, &'static str> {
+    if request.headers().get("User-Agent").any(|ua| ua.contains("Mozilla")) {
+        request.cookies().add(Cookie::new(RETURN_COOKIE, request.uri().to_string()));
+        Either::Left(Redirect::to(uri!(crate::interface::auth::login)))
+    } else {
+        Either::Right("Unauthorized")
+    }
+}
+
 #[main]
 async fn main() -> Result<(), rocket::Error> {
     rocket::build()
@@ -130,6 +141,7 @@ async fn main() -> Result<(), rocket::Error> {
         .attach(AdHoc::try_on_ignite("migrations", database_init))
         .mount("/static", FileServer::from("static"))
         .attach(AdHoc::config::<AppConfiguration>())
+        .register("/", catchers![unauthorized])
         .manage(TorrentLibrary::new().await)
         .attach(interface::faring())
         .attach(tracking::faring())

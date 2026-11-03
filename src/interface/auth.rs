@@ -15,8 +15,9 @@ use uuid::Uuid;
 
 use crate::{Storage, interface::Either};
 
-const SESSION_COOKIE: &str = "session-token";
-const RESET_COOKIE: &str = "reset-token";
+pub(crate) const SESSION_COOKIE: &str = "session-token";
+pub(crate) const RESET_COOKIE: &str = "reset-token";
+pub(crate) const RETURN_COOKIE: &str = "return-page";
 
 #[get("/change-password")]
 pub(crate) async fn change_password(user: UserSession) -> Template {
@@ -162,8 +163,16 @@ pub(crate) async fn login_submit(
         ));
     }
 
+    let return_page = cookie
+        .get(RETURN_COOKIE)
+        .map(|c| {
+            cookie.remove(RETURN_COOKIE);
+            c.value().to_string()
+        })
+        .unwrap_or_else(|| uri!(profile).to_string());
+
     cookie.add_private(session_cookie(user.uuid));
-    Ok(Redirect::to(uri!(profile)))
+    Ok(Redirect::to(return_page))
 }
 
 #[post("/logout")]
