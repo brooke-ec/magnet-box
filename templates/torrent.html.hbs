@@ -1,5 +1,35 @@
 {{#*inline "content"}}
-  Hello
+  <main class="column gap">
+    <h1 style="font-size: 25px; margin-bottom: 0;">{{name}}</h1>
+    <span style="color: var(--ctp-subtext1);">{{date}} • {{size}} • {{leechers}} leechers • {{seeders}} seeders</span>
+    <div class="row gap">
+      <a class="box" href="{{magnet}}" class="button">
+        <span>Magnet Link</span>
+        <span class="fas" style="margin-left: 10px;"></span>
+      </a>
+      <a class="box" href="{{download}}" class="button">
+        <span>Download</span>
+        <span class="fas" style="margin-left: 10px;"></span>
+      </a>
+    </div>
+    <h2 style="margin-bottom: 0; margin-top: 10px">Files</h2>
+    <div class="box">
+      <div class="file-tree">
+        {{#each tree}}
+          <div class="file-tree-item">
+            <span class="file-tree-indent">{{indent}}</span>
+            {{#if is_file}}
+              <span class="fas file-tree-icon"></span>
+            {{else}}
+              <span class="fas file-tree-icon folder"></span>
+            {{/if}}
+            <span class="file-tree-name">{{name}}</span>
+            <span class="file-tree-size">{{size}}</span>
+          </div>
+        {{/each}}
+      </div>
+    </div>
+  </main>
 {{/inline}}
 
 {{> layout }}

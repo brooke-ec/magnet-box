@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT [path], [size] FROM [file] WHERE [torrent] = ? ORDER BY [path]",
+  "describe": {
+    "columns": [
+      {
+        "name": "path",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "size",
+        "ordinal": 1,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "5d94f76c9fb100b8d71b94fb7d4257dd0426a570cf1b144c8e2faa6e9f73cc5a"
+}

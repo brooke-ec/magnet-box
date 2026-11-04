@@ -452,9 +452,28 @@ a {
 	margin-right: 5px;
 }
 
-.column {
+.column,
+.row {
 	display: flex;
+}
+
+.column.center,
+.row.center {
+	align-items: center;
+	justify-content: center;
+}
+
+.column.gap,
+.row.gap {
+	gap: 10px;
+}
+
+.column {
 	flex-direction: column;
+}
+
+.row {
+	flex-direction: row;
 }
 
 @media (max-width: 600px) {
@@ -475,4 +494,58 @@ a {
 
 .error {
 	color: var(--ctp-red);
+}
+
+.file-tree {
+	display: flex;
+	font-size: 0.9em;
+	margin-left: -5px;
+	flex-direction: column;
+	font-family: monospace;
+}
+
+.file-tree-item {
+	grid-template-columns: auto 29px 1fr fit-content(200px);
+	align-items: center;
+	display: grid;
+}
+
+.file-tree-indent {
+	white-space: pre;
+}
+
+.file-tree-icon {
+	width: 24px;
+	margin-left: 5px;
+	text-align: center;
+	color: var(--ctp-subtext1);
+	font-size: 0.85em;
+}
+
+.file-tree-icon.folder {
+	color: var(--ctp-yellow);
+}
+
+.file-tree-name {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	margin-right: 10px;
+}
+
+.file-tree-name a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.file-tree-name a:hover {
+	color: var(--ctp-blue);
+	text-decoration: underline;
+}
+
+.file-tree-size {
+	color: var(--ctp-subtext0);
+	font-size: 0.9em;
+	text-align: right;
+	white-space: nowrap;
 }

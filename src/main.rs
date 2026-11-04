@@ -89,7 +89,7 @@ async fn database_init(rocket: rocket::Rocket<rocket::Build>) -> rocket::fairing
         }
     };
 
-    match sqlx::query!("SELECT [id] as \"id: Uuid\", [v1_hash], [v2_hash], [name], [size], [date] FROM [torrent]")
+    match sqlx::query!("SELECT [id] as \"id: Uuid\", [v1_hash], [v2_hash], [name], [size], [date] FROM [torrent] ORDER BY [date] DESC")
         .fetch_all(&**connection)
         .await
     {

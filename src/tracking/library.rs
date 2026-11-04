@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use rocket::tokio::try_join;
 use scc::hash_map::OccupiedEntry;
+use serde::Serialize;
 use std::{collections::hash_map::RandomState, net::IpAddr, sync::Arc};
 use uuid::Uuid;
 
@@ -137,7 +138,7 @@ impl TorrentLibrary {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub(crate) struct Torrent {
     pub(crate) date: chrono::DateTime<chrono::Utc>,
     pub(crate) leechers: usize,

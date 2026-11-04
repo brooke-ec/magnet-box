@@ -17,3 +17,11 @@ CREATE TABLE [torrent] (
     [author] BLOB NOT NULL,
     FOREIGN KEY ([author]) REFERENCES [user]([id])
 );
+
+CREATE TABLE [file] (
+    [torrent] BLOB NOT NULL,
+    [path] TEXT NOT NULL,
+    [size] INTEGER NOT NULL,
+    PRIMARY KEY ([torrent], [path]),
+    FOREIGN KEY ([torrent]) REFERENCES [torrent]([id]) ON DELETE CASCADE
+);

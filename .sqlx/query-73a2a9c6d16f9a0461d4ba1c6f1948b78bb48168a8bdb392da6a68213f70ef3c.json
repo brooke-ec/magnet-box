@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT [id] as \"id: Uuid\", [v1_hash], [v2_hash], [name], [size], [date] FROM [torrent]",
+  "query": "SELECT [id] as \"id: Uuid\", [v1_hash], [v2_hash], [name], [size], [date] FROM [torrent] ORDER BY [date] DESC",
   "describe": {
     "columns": [
       {
@@ -46,5 +46,5 @@
       false
     ]
   },
-  "hash": "dedcd7a71b5baff1e3b5c749cfbe309a427d875b4fe23161b8cdd6c4f19426d1"
+  "hash": "73a2a9c6d16f9a0461d4ba1c6f1948b78bb48168a8bdb392da6a68213f70ef3c"
 }
