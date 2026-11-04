@@ -3,7 +3,8 @@ CREATE TABLE [user] (
     [username] TEXT NOT NULL UNIQUE,
     [password] TEXT,
     [reset_token] TEXT,
-    [reset_token_expiry] DATETIME
+    [reset_token_expiry] DATETIME,
+    [is_admin] INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE [torrent] (
@@ -15,8 +16,7 @@ CREATE TABLE [torrent] (
     [metainfo] BLOB NOT NULL,
     [date] DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     [magnet] TEXT NOT NULL,
-    [author] BLOB NOT NULL,
-    FOREIGN KEY ([author]) REFERENCES [user]([id])
+    [author] TEXT NOT NULL
 );
 
 CREATE TABLE [file] (

@@ -17,7 +17,10 @@ use uuid::Uuid;
 use crate::{
     Storage,
     configuration::AppConfiguration,
-    interface::{Either, auth::UserSession},
+    interface::{
+        Either,
+        auth::{AdminSession, UserSession},
+    },
     tracking::{InfoHash, TorrentLibrary},
 };
 
@@ -97,7 +100,7 @@ pub(crate) async fn upload_submit(
     let bytes = torrent.to_vec();
     let id = Uuid::new_v4();
 
-    sqlx::query!(
+    match sqlx::query!(
         "INSERT INTO [torrent] 
         ([id], [v1_hash], [v2_hash], [name], [size], [metainfo], [author], [date], [magnet])
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -107,23 +110,26 @@ pub(crate) async fn upload_submit(
         torrent.name,
         size,
         bytes,
-        user.id,
+        user.username,
         date,
         magnet
     )
     .execute(&mut **db)
     .await
-    .map_err(|e| {
-        if e.as_database_error().is_some_and(|e| e.is_unique_violation()) {
-            Either::Left(Template::render(
-                "upload",
-                context! { user, error: "Torrent has already been uploaded" },
-            ))
-        } else {
-            rocket::error!("Failed to insert torrent into database: {:?}", e);
-            Either::Right(Status::InternalServerError)
+    {
+        Ok(_) => (),
+        Err(e) => {
+            return Err(if e.as_database_error().is_some_and(|e| e.is_unique_violation()) {
+                Either::Left(Template::render(
+                    "upload",
+                    context! { user, error: "Torrent has already been uploaded" },
+                ))
+            } else {
+                rocket::error!("Failed to insert torrent into database: {:?}", e);
+                Either::Right(Status::InternalServerError)
+            });
         }
-    })?;
+    }
 
     let mut files_query = sqlx::QueryBuilder::<sqlx::Sqlite>::new("INSERT INTO [file] ([torrent], [path], [size]) VALUES ");
     let mut first = false;
@@ -154,7 +160,7 @@ pub(crate) async fn upload_submit(
     let v2_hash = v2_hash.map(|h| InfoHash::try_from(&h[..20]).unwrap());
 
     library
-        .add(id, v1_hash, v2_hash, torrent.name.clone(), size as u64, date, magnet)
+        .add(id, v1_hash, v2_hash, torrent.name.clone(), user.username, size as u64, date, magnet)
         .await
         .map_err(|e| {
             rocket::error!("Failed to add torrent to library: {:?}", e);
@@ -254,6 +260,7 @@ pub(crate) async fn torrent(
             id: torrent.id,
             name: &torrent.name,
             magnet: &torrent.magnet,
+            author: &torrent.author,
             seeders: torrent.seeders,
             leechers: torrent.leechers,
             size: format_size(torrent.size, BINARY),
@@ -263,7 +270,7 @@ pub(crate) async fn torrent(
     ))
 }
 
-#[get("/download/<id>")]
+#[get("/torrent/<id>/download")]
 pub(crate) async fn download(id: &str, mut db: Connection<Storage>) -> Result<(ContentType, Vec<u8>), Status> {
     let id = Uuid::parse_str(&id[..id.len() - 8]).map_err(|_| Status::NotFound)?;
     let a = sqlx::query!("SELECT [metainfo] FROM [torrent] WHERE [id] = ?", id)
@@ -275,4 +282,49 @@ pub(crate) async fn download(id: &str, mut db: Connection<Storage>) -> Result<(C
         })?;
 
     Ok((ContentType::new("application", "x-bittorrent"), a.metainfo))
+}
+
+#[get("/torrent/<id>/delete")]
+pub(crate) async fn delete_confirm(id: &str, user: AdminSession, library: &State<TorrentLibrary>) -> Result<Template, Status> {
+    let id = Uuid::parse_str(id).map_err(|_| Status::NotFound)?;
+    let torrent = library.get_torrent(&id).await.ok_or(Status::NotFound)?;
+
+    Ok(Template::render(
+        "delete-torrent",
+        context! {
+            name: &torrent.name,
+            user
+        },
+    ))
+}
+
+#[post("/torrent/<id>/delete")]
+pub(crate) async fn delete_submit(
+    id: &str,
+    user: AdminSession,
+    mut db: Connection<Storage>,
+    library: &State<TorrentLibrary>,
+) -> Result<Template, Status> {
+    let id = Uuid::parse_str(id).map_err(|_| Status::NotFound)?;
+
+    sqlx::query!("DELETE FROM [torrent] WHERE [id] = ?", id)
+        .execute(&mut **db)
+        .await
+        .map_err(|e| {
+            rocket::error!("Failed to delete torrent {}: {:?}", id, e);
+            Status::InternalServerError
+        })?;
+
+    library.remove(&id).await.map_err(|_| {
+        rocket::error!("Failed to remove torrent {} from library", id);
+        Status::InternalServerError
+    })?;
+
+    Ok(Template::render(
+        "message",
+        context! {
+            message: "🗑️ Torrent deleted successfully.",
+            user
+        },
+    ))
 }

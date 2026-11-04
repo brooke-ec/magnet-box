@@ -64,7 +64,7 @@ async fn database_init(rocket: rocket::Rocket<rocket::Build>) -> rocket::fairing
                     return Err(rocket);
                 }
             },
-            None => match connection.create_user("admin").await {
+            None => match connection.create_user("admin", true).await {
                 Ok(token) => token,
                 Err(error) => {
                     rocket::error!("Failed to create user: {}", error);
@@ -90,7 +90,16 @@ async fn database_init(rocket: rocket::Rocket<rocket::Build>) -> rocket::fairing
     };
 
     match sqlx::query!(
-        "SELECT [id] as \"id: Uuid\", [v1_hash], [v2_hash], [name], [size], [date], [magnet] FROM [torrent] ORDER BY [date] DESC"
+        "SELECT
+        [id] as \"id: Uuid\",
+        [v1_hash],
+        [v2_hash],
+        [name],
+        [size],
+        [date],
+        [magnet],
+        [author] 
+        FROM [torrent] ORDER BY [date] DESC"
     )
     .fetch_all(&**connection)
     .await
@@ -103,6 +112,7 @@ async fn database_init(rocket: rocket::Rocket<rocket::Build>) -> rocket::fairing
                         record.v1_hash.map(|h| InfoHash::try_from(&h[..20]).unwrap()),
                         record.v2_hash.map(|h| InfoHash::try_from(&h[..20]).unwrap()),
                         record.name,
+                        record.author,
                         record.size as u64,
                         record.date.and_utc(),
                         record.magnet,

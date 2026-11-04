@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use password_auth::generate_hash;
 use rand::{RngExt, distr::Alphanumeric};
 use rocket::time::Duration;
@@ -323,11 +325,12 @@ fn session_cookie(user_id: Uuid) -> Cookie<'static> {
 pub(crate) struct UserSession {
     pub(crate) id: Uuid,
     pub(crate) username: String,
+    pub(crate) is_admin: bool,
 }
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for UserSession {
-    type Error = Option<Redirect>;
+    type Error = ();
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let cookies = req.cookies();
@@ -335,43 +338,66 @@ impl<'r> FromRequest<'r> for UserSession {
             .get_private(SESSION_COOKIE)
             .and_then(|cookie| serde_json::from_str::<Session>(cookie.value()).ok())
         {
-            None => return Outcome::Error((Status::Unauthorized, Some(Redirect::to(uri!(login))))),
+            None => return Outcome::Error((Status::Unauthorized, ())),
             Some(user_id) => user_id,
         };
 
         if session.expiry < chrono::Utc::now() {
-            return Outcome::Error((Status::Unauthorized, Some(Redirect::to(uri!(login)))));
+            return Outcome::Error((Status::Unauthorized, ()));
         }
 
         let mut db = match req.guard::<Connection<Storage>>().await {
             Outcome::Forward(_) => {
                 rocket::error!("Database connection type mismatch");
-                return Outcome::Error((Status::InternalServerError, None));
+                return Outcome::Error((Status::InternalServerError, ()));
             }
             Outcome::Error(_) => {
                 rocket::error!("Failed to acquire database connection");
-                return Outcome::Error((Status::InternalServerError, None));
+                return Outcome::Error((Status::InternalServerError, ()));
             }
             Outcome::Success(db) => db,
         };
 
         let user = match sqlx::query_as!(
             UserSession,
-            "SELECT [id] as \"id: Uuid\", [username] FROM [user] WHERE [id] = ? LIMIT 1",
+            "SELECT [id] as \"id: Uuid\", [username], [is_admin] as \"is_admin: bool\" FROM [user] WHERE [id] = ? LIMIT 1",
             session.user_id
         )
         .fetch_optional(&mut **db)
         .await
         {
             Ok(Some(user)) => user,
-            Ok(None) => return Outcome::Error((Status::Unauthorized, Some(Redirect::to(uri!(login))))),
+            Ok(None) => return Outcome::Error((Status::Unauthorized, ())),
             Err(e) => {
                 rocket::error!("Failed to fetch user session: {:?}", e);
-                return Outcome::Error((Status::InternalServerError, None));
+                return Outcome::Error((Status::InternalServerError, ()));
             }
         };
 
         Outcome::Success(user)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, FromRow, Serialize)]
+pub(crate) struct AdminSession(UserSession);
+
+impl Deref for AdminSession {
+    type Target = UserSession;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for AdminSession {
+    type Error = ();
+
+    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        req.guard::<UserSession>().await.and_then(|user| match user.is_admin {
+            true => Outcome::Success(AdminSession(user)),
+            false => Outcome::Error((Status::Forbidden, ())),
+        })
     }
 }
 
@@ -390,14 +416,15 @@ impl Storage {
         Ok(token)
     }
 
-    pub(crate) async fn create_user(&self, username: &str) -> Result<String, sqlx::Error> {
+    pub(crate) async fn create_user(&self, username: &str, admin: bool) -> Result<String, sqlx::Error> {
         let token = generate_token();
         let uuid = Uuid::new_v4();
 
         query!(
-            "INSERT INTO [user] ([id], [username], [reset_token], [reset_token_expiry]) VALUES (?, ?, ?, DATETIME('now', '+1 hour'))",
+            "INSERT INTO [user] ([id], [username], [is_admin], [reset_token], [reset_token_expiry]) VALUES (?, ?, ?, ?, DATETIME('now', '+1 hour'))",
             uuid,
             username,
+            admin,
             token
         )
         .execute(&**self)

@@ -153,6 +153,8 @@ pub(super) async fn announce_endpoint<'r>(
         serde_querystring::ParseMode::UrlEncoded,
     )?;
 
+    println!("Announce query: {:?}", query);
+
     let info_hash: [u8; 20] = query.info_hash.as_ref().try_into().map_err(|_| err!("Invalid info_hash length"))?;
     let peer_id: [u8; 20] = query.peer_id.as_ref().try_into().map_err(|_| err!("Invalid peer_id length"))?;
     let mut swarm = library.get_swarm(&info_hash).await.ok_or(err!("Torrent not allowed"))?;

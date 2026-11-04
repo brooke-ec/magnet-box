@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT [id] as \"id: Uuid\", [username] FROM [user] WHERE [id] = ? LIMIT 1",
+  "query": "SELECT [id] as \"id: Uuid\", [username], [is_admin] as \"is_admin: bool\" FROM [user] WHERE [id] = ? LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -12,6 +12,11 @@
         "name": "username",
         "ordinal": 1,
         "type_info": "Text"
+      },
+      {
+        "name": "is_admin: bool",
+        "ordinal": 2,
+        "type_info": "Int64"
       }
     ],
     "parameters": {
@@ -19,8 +24,9 @@
     },
     "nullable": [
       false,
+      false,
       false
     ]
   },
-  "hash": "46ae515aba9945001b60630614006b3ce8232c2b7e1ecdae5f03fa973d1194c0"
+  "hash": "608dda12a6929a699835a48954c08dd8b3f639537d51ba04078762c4db9f26c4"
 }

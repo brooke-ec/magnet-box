@@ -29,6 +29,7 @@ impl TorrentLibrary {
         v1_hash: Option<InfoHash>,
         v2_hash: Option<InfoHash>,
         name: String,
+        author: String,
         size: u64,
         date: DateTime<Utc>,
         magnet: String,
@@ -42,6 +43,7 @@ impl TorrentLibrary {
                             v1_hash,
                             Swarm {
                                 peers: indexmap::IndexMap::new(),
+                                hash: v1_hash,
                                 torrent: id,
                             },
                         )
@@ -59,6 +61,7 @@ impl TorrentLibrary {
                             v2_hash,
                             Swarm {
                                 peers: indexmap::IndexMap::new(),
+                                hash: v2_hash,
                                 torrent: id,
                             },
                         )
@@ -76,8 +79,11 @@ impl TorrentLibrary {
                         Torrent {
                             leechers: 0,
                             seeders: 0,
+                            v1_hash,
+                            v2_hash,
                             magnet,
                             date,
+                            author,
                             name,
                             size,
                             id,
@@ -85,6 +91,28 @@ impl TorrentLibrary {
                     )
                     .await
                     .map_err(|_| ())
+            }
+        )
+        .map(|_| ())
+    }
+
+    pub(crate) async fn remove(&self, id: &Uuid) -> Result<(), ()> {
+        let torrent = self.0.torrents.remove_async(id).await.ok_or(())?.1;
+
+        try_join!(
+            async {
+                if let Some(v1_hash) = torrent.v1_hash {
+                    self.0.swarms.remove_async(&v1_hash).await.ok_or(())
+                } else {
+                    Err(())
+                }
+            },
+            async {
+                if let Some(v2_hash) = torrent.v2_hash {
+                    self.0.swarms.remove_async(&v2_hash).await.ok_or(())
+                } else {
+                    Err(())
+                }
             }
         )
         .map(|_| ())
@@ -125,9 +153,12 @@ impl TorrentLibrary {
 #[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub(crate) struct Torrent {
     pub(crate) date: chrono::DateTime<chrono::Utc>,
+    pub(crate) v1_hash: Option<InfoHash>,
+    pub(crate) v2_hash: Option<InfoHash>,
     pub(crate) leechers: usize,
     pub(crate) magnet: String,
     pub(crate) seeders: usize,
+    pub(crate) author: String,
     pub(crate) name: String,
     pub(crate) size: u64,
     pub(crate) id: Uuid,
@@ -136,6 +167,7 @@ pub(crate) struct Torrent {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(super) struct Swarm {
     pub(super) peers: indexmap::IndexMap<InfoHash, Peer>,
+    pub(super) hash: InfoHash,
     pub(super) torrent: Uuid,
 }
 

@@ -22,7 +22,15 @@
       </div>
     </div>
   {{else}}
-    <main>No torrents uploaded yet! <a href="/login" style="text-decoration: underline;">Login</a> to get started!</main>
+    <main>
+      No torrents uploaded yet!
+      {{#if user}}
+        <a href="/upload" style="text-decoration: underline;">Upload a torrent</a>
+      {{else}}
+        <a href="/login" style="text-decoration: underline;">Login</a>
+      {{/if}}
+       to get started!
+    </main>
   {{/if}}
 {{/inline}}
 
