@@ -6,7 +6,7 @@ use rocket::{
     State,
     data::Limits,
     form::{DataField, Error, Errors, Form, FromFormField, ValueField},
-    http::Status,
+    http::{ContentType, Status},
     response::Redirect,
 };
 use rocket_db_pools::Connection;
@@ -28,12 +28,12 @@ pub(super) async fn list(library: &State<TorrentLibrary>, user: Option<UserSessi
     library
         .iter_torrents(|torrent| {
             torrents.push(TorrentContext {
+                download: uri!(download(format!("{}.torrent", torrent.id))).to_string(),
                 date: torrent.date.format("%Y-%m-%d").to_string(),
-                download: format!("/download/{}", torrent.id),
                 size: format_size(torrent.size, BINARY),
                 url: format!("/torrent/{}", torrent.id),
+                magnet: torrent.magnet.clone(),
                 name: torrent.name.clone(),
-                magnet: "".to_string(),
             });
 
             true
@@ -84,13 +84,23 @@ pub(crate) async fn upload_submit(
         hightorrent::InfoHash::V2(v2) => (None, Some(v2.as_bytes())),
     };
 
+    let magnet = torrent
+        .magnet_link()
+        .map_err(|e| {
+            rocket::error!("Failed to generate magnet link: {:?}", e);
+            Either::Right(Status::InternalServerError)
+        })?
+        .to_string();
+
     let size = torrent.decoded.files().iter().flatten().map(|f| f.size).sum::<u64>() as i64;
     let date = chrono::Utc::now();
     let bytes = torrent.to_vec();
     let id = Uuid::new_v4();
 
     sqlx::query!(
-        "INSERT INTO [torrent] ([id], [v1_hash], [v2_hash], [name], [size], [metainfo], [author], [date]) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO [torrent] 
+        ([id], [v1_hash], [v2_hash], [name], [size], [metainfo], [author], [date], [magnet])
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         id,
         v1_hash,
         v2_hash,
@@ -99,6 +109,7 @@ pub(crate) async fn upload_submit(
         bytes,
         user.id,
         date,
+        magnet
     )
     .execute(&mut **db)
     .await
@@ -143,7 +154,7 @@ pub(crate) async fn upload_submit(
     let v2_hash = v2_hash.map(|h| InfoHash::try_from(&h[..20]).unwrap());
 
     library
-        .add(id, v1_hash, v2_hash, torrent.name.clone(), size as u64, date)
+        .add(id, v1_hash, v2_hash, torrent.name.clone(), size as u64, date, magnet)
         .await
         .map_err(|e| {
             rocket::error!("Failed to add torrent to library: {:?}", e);
@@ -242,10 +253,26 @@ pub(crate) async fn torrent(
             tree,
             id: torrent.id,
             name: &torrent.name,
+            magnet: &torrent.magnet,
             seeders: torrent.seeders,
             leechers: torrent.leechers,
             size: format_size(torrent.size, BINARY),
-            date: torrent.date.format("%Y-%m-%d").to_string()
+            date: torrent.date.format("%Y-%m-%d").to_string(),
+            download: uri!(download(format!("{}.torrent", torrent.id))).to_string()
         },
     ))
+}
+
+#[get("/download/<id>")]
+pub(crate) async fn download(id: &str, mut db: Connection<Storage>) -> Result<(ContentType, Vec<u8>), Status> {
+    let id = Uuid::parse_str(&id[..id.len() - 8]).map_err(|_| Status::NotFound)?;
+    let a = sqlx::query!("SELECT [metainfo] FROM [torrent] WHERE [id] = ?", id)
+        .fetch_one(&mut **db)
+        .await
+        .map_err(|e| {
+            rocket::error!("Failed to fetch torrent {}: {:?}", id, e);
+            Status::InternalServerError
+        })?;
+
+    Ok((ContentType::new("application", "x-bittorrent"), a.metainfo))
 }

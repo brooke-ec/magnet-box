@@ -14,6 +14,7 @@ CREATE TABLE [torrent] (
     [size] INTEGER NOT NULL,
     [metainfo] BLOB NOT NULL,
     [date] DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    [magnet] TEXT NOT NULL,
     [author] BLOB NOT NULL,
     FOREIGN KEY ([author]) REFERENCES [user]([id])
 );

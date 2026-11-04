@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO [torrent] \n        ([id], [v1_hash], [v2_hash], [name], [size], [metainfo], [author], [date], [magnet])\n        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 9
+    },
+    "nullable": []
+  },
+  "hash": "2da989d57f8edb668e431f6106c0c12d231a52d5cef99052acfd58d0a845aed6"
+}

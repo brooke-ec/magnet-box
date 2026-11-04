@@ -17,28 +17,10 @@ struct InnerTorrentLibrary {
 
 impl TorrentLibrary {
     pub(crate) async fn new() -> Self {
-        let library = Self(Arc::new(InnerTorrentLibrary {
+        Self(Arc::new(InnerTorrentLibrary {
             torrents: scc::HashMap::new(),
             swarms: scc::HashMap::new(),
-        }));
-
-        library
-            .add(
-                Uuid::new_v4(),
-                Some([
-                    0x66, 0x79, 0x55, 0x0d, 0x75, 0x4d, 0x4d, 0xbc, 0x56, 0xdb, 0x6f, 0x6b, 0x34, 0x65, 0xdb, 0x29, 0xc0, 0x86, 0x99, 0x24,
-                ]),
-                Some([
-                    0x11, 0xfc, 0x61, 0x36, 0x2a, 0xbd, 0x3a, 0x20, 0xf8, 0xf9, 0x7d, 0x1a, 0x0a, 0x9a, 0xed, 0x69, 0x47, 0x1e, 0x12, 0x99,
-                ]),
-                "Test Torrent".to_string(),
-                1024,
-                Utc::now(),
-            )
-            .await
-            .unwrap();
-
-        library
+        }))
     }
 
     pub(crate) async fn add(
@@ -49,6 +31,7 @@ impl TorrentLibrary {
         name: String,
         size: u64,
         date: DateTime<Utc>,
+        magnet: String,
     ) -> Result<(), ()> {
         try_join!(
             async {
@@ -93,6 +76,7 @@ impl TorrentLibrary {
                         Torrent {
                             leechers: 0,
                             seeders: 0,
+                            magnet,
                             date,
                             name,
                             size,
@@ -142,6 +126,7 @@ impl TorrentLibrary {
 pub(crate) struct Torrent {
     pub(crate) date: chrono::DateTime<chrono::Utc>,
     pub(crate) leechers: usize,
+    pub(crate) magnet: String,
     pub(crate) seeders: usize,
     pub(crate) name: String,
     pub(crate) size: u64,

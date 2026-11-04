@@ -89,9 +89,11 @@ async fn database_init(rocket: rocket::Rocket<rocket::Build>) -> rocket::fairing
         }
     };
 
-    match sqlx::query!("SELECT [id] as \"id: Uuid\", [v1_hash], [v2_hash], [name], [size], [date] FROM [torrent] ORDER BY [date] DESC")
-        .fetch_all(&**connection)
-        .await
+    match sqlx::query!(
+        "SELECT [id] as \"id: Uuid\", [v1_hash], [v2_hash], [name], [size], [date], [magnet] FROM [torrent] ORDER BY [date] DESC"
+    )
+    .fetch_all(&**connection)
+    .await
     {
         Ok(records) => {
             match try_join_all(records.into_iter().map(async |record| {
@@ -103,6 +105,7 @@ async fn database_init(rocket: rocket::Rocket<rocket::Build>) -> rocket::fairing
                         record.name,
                         record.size as u64,
                         record.date.and_utc(),
+                        record.magnet,
                     )
                     .await
             }))

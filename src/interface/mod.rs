@@ -1,6 +1,6 @@
 use crate::configuration::AppConfiguration;
 use crate::interface::auth::{change_password, change_password_submit, login_submit, logout, profile};
-use crate::interface::torrents::{upload, upload_submit};
+use crate::interface::torrents::{download, upload, upload_submit};
 use crate::interface::{
     auth::{login, reset_password, reset_password_link, reset_password_submit},
     torrents::{list, torrent},
@@ -48,6 +48,7 @@ pub(crate) fn faring() -> rocket::fairing::AdHoc {
                     reset_password,
                     upload_submit,
                     login_submit,
+                    download,
                     torrent,
                     profile,
                     upload,

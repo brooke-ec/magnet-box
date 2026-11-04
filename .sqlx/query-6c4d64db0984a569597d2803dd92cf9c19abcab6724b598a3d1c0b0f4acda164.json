@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT [id] as \"id: Uuid\", [v1_hash], [v2_hash], [name], [size], [date] FROM [torrent] ORDER BY [date] DESC",
+  "query": "SELECT [id] as \"id: Uuid\", [v1_hash], [v2_hash], [name], [size], [date], [magnet] FROM [torrent] ORDER BY [date] DESC",
   "describe": {
     "columns": [
       {
@@ -32,6 +32,11 @@
         "name": "date",
         "ordinal": 5,
         "type_info": "Datetime"
+      },
+      {
+        "name": "magnet",
+        "ordinal": 6,
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -43,8 +48,9 @@
       true,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "73a2a9c6d16f9a0461d4ba1c6f1948b78bb48168a8bdb392da6a68213f70ef3c"
+  "hash": "6c4d64db0984a569597d2803dd92cf9c19abcab6724b598a3d1c0b0f4acda164"
 }
