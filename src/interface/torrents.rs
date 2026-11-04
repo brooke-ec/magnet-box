@@ -79,9 +79,9 @@ pub(crate) async fn upload_submit(
     }
 
     let (v1_hash, v2_hash) = match &torrent.hash {
-        hightorrent::InfoHash::Hybrid((v1, v2)) => (Some(v1.as_bytes()), Some(v2.as_bytes())),
-        hightorrent::InfoHash::V1(v1) => (Some(v1.as_bytes()), None),
-        hightorrent::InfoHash::V2(v2) => (None, Some(v2.as_bytes())),
+        hightorrent::InfoHash::Hybrid((v1, v2)) => (Some(hex::decode(v1).unwrap()), Some(hex::decode(v2).unwrap())),
+        hightorrent::InfoHash::V1(v1) => (Some(hex::decode(v1).unwrap()), None),
+        hightorrent::InfoHash::V2(v2) => (None, Some(hex::decode(v2).unwrap())),
     };
 
     let magnet = torrent
