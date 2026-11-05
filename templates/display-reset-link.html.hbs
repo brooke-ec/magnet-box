@@ -1,0 +1,32 @@
+{{#*inline "content"}}
+  <main>
+    <h1>Generated Password Reset Link:</h1>
+    <p>Give this link to {{username}} to update their password. It will expire in 1 hour.</p>
+    <div class="code" style="display: block; padding-right: 2px">
+        <span id="reset-link">{{url}}</span>
+        <button class="fas a" type="button" id="copy-reset-link" aria-label="Copy reset link" title="Copy reset link"></button>
+    </div>
+    <p><a href="/admin" style="text-decoration: underline;">Back</a>    </p>
+  </main>
+
+<script>
+  document.getElementById("copy-reset-link").addEventListener("click", async () => {
+    const resetLink = document.getElementById("reset-link").textContent;
+    const copyButton = document.getElementById("copy-reset-link");
+
+    try {
+      await navigator.clipboard.writeText(resetLink);
+      copyButton.setAttribute("title", "Copied");
+      copyButton.setAttribute("aria-label", "Copied");
+      alert("Reset link copied to clipboard!");
+    } catch (error) {
+      console.error("Failed to copy reset link:", error);
+      copyButton.setAttribute("title", "Unable to copy reset link");
+      copyButton.setAttribute("aria-label", "Unable to copy reset link");
+      alert("Unable to copy reset link. Please copy it manually.");
+    }
+  });
+</script>
+{{/inline}}
+
+{{> layout }}

@@ -12,7 +12,7 @@ use rocket::{
 use rocket_db_pools::Connection;
 use rocket_dyn_templates::{Template, context};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, query};
+use sqlx::{Executor, FromRow, Sqlite, query};
 use uuid::Uuid;
 
 use crate::{Storage, interface::Either};
@@ -401,35 +401,40 @@ impl<'r> FromRequest<'r> for Admin {
     }
 }
 
-impl Storage {
-    pub(crate) async fn reset_password(&self, user_id: Uuid) -> Result<String, sqlx::Error> {
-        let token = generate_token();
+pub(crate) async fn create_reset_password<'c, E: Executor<'c, Database = Sqlite>>(db: E, user_id: Uuid) -> Result<String, sqlx::Error> {
+    let token = generate_token();
 
-        query!(
-            "UPDATE [user] SET [reset_token] = ?, [reset_token_expiry] = DATETIME('now', '+1 hour') WHERE [id] = ?",
-            token,
-            user_id
-        )
-        .execute(&**self)
-        .await?;
+    query!(
+        "UPDATE [user] SET [reset_token] = ?, [reset_token_expiry] = DATETIME('now', '+1 hour') WHERE [id] = ?",
+        token,
+        user_id
+    )
+    .execute(db)
+    .await?;
 
-        Ok(token)
-    }
+    Ok(token)
+}
 
-    pub(crate) async fn create_user(&self, username: &str, admin: bool) -> Result<String, sqlx::Error> {
-        let token = generate_token();
-        let uuid = Uuid::new_v4();
+pub(crate) async fn create_user<'c, E: Executor<'c, Database = Sqlite>>(db: E, username: &str, admin: bool) -> Result<String, sqlx::Error> {
+    let token = generate_token();
+    let uuid = Uuid::new_v4();
 
-        query!(
+    query!(
             "INSERT INTO [user] ([id], [username], [is_admin], [reset_token], [reset_token_expiry]) VALUES (?, ?, ?, ?, DATETIME('now', '+1 hour'))",
             uuid,
             username,
             admin,
             token
         )
-        .execute(&**self)
+        .execute(db)
         .await?;
 
-        Ok(token)
-    }
+    Ok(token)
+}
+
+pub(crate) async fn get_username<'c, E: Executor<'c, Database = Sqlite>>(db: E, id: Uuid) -> Result<Option<String>, sqlx::Error> {
+    sqlx::query!("SELECT [username] FROM [user] WHERE [id] = ?", id)
+        .fetch_optional(db)
+        .await
+        .map(|r| r.map(|o| o.username))
 }

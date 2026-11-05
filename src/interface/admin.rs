@@ -1,8 +1,9 @@
 use crate::{
     Storage,
-    interface::auth::{Admin, User},
+    configuration::AppConfiguration,
+    interface::auth::{Admin, User, create_reset_password, get_username},
 };
-use rocket::http::Status;
+use rocket::{State, http::Status};
 use rocket_db_pools::Connection;
 use rocket_dyn_templates::{Template, context};
 use serde::Serialize;
@@ -23,7 +24,7 @@ pub(crate) async fn settings(user: Admin, mut db: Connection<Storage>) -> Result
     .into_iter()
     .map(|user| UserListContext {
         delete_uri: uri!(delete_user_confirm(user.id.to_string())).to_string(),
-        reset_uri: "".to_string(),
+        reset_uri: uri!(reset_user_password(user.id.to_string())).to_string(),
         role_uri: "".to_string(),
         user,
     })
@@ -44,15 +45,13 @@ struct UserListContext {
 #[get("/admin/<id>/delete")]
 pub(crate) async fn delete_user_confirm(id: &str, user: Admin, mut db: Connection<Storage>) -> Result<Template, Status> {
     let id = Uuid::parse_str(id).map_err(|_| Status::NotFound)?;
-    let username = sqlx::query!("SELECT [username] FROM [user] WHERE [id] = ?", id)
-        .fetch_optional(&mut **db)
+    let username = get_username(&mut **db, id)
         .await
         .map_err(|e| {
             rocket::error!("Failed to fetch user from database: {}", e);
             Status::InternalServerError
         })?
-        .ok_or(Status::NotFound)?
-        .username;
+        .ok_or(Status::NotFound)?;
 
     Ok(Template::render("delete-user", context! { user, username }))
 }
@@ -72,4 +71,22 @@ pub(crate) async fn delete_user_submit(id: &str, user: Admin, mut db: Connection
         "message",
         context! { user, message: "🗑️ User deleted successfully." },
     ))
+}
+
+#[get("/admin/<id>/reset-password")]
+pub(crate) async fn reset_user_password(
+    id: &str,
+    user: Admin,
+    mut db: Connection<Storage>,
+    config: &State<AppConfiguration>,
+) -> Result<Template, Status> {
+    let id = Uuid::parse_str(id).map_err(|_| Status::NotFound)?;
+
+    let token = create_reset_password(&mut **db, id).await.map_err(|e| {
+        rocket::error!("Failed to reset user password: {}", e);
+        Status::InternalServerError
+    })?;
+
+    let url = format!("{}{}", config.url, uri!(crate::interface::auth::reset_password_link(token)));
+    Ok(Template::render("display-reset-link", context! { user, url }))
 }

@@ -11,7 +11,10 @@ use uuid::Uuid;
 
 use crate::{
     configuration::AppConfiguration,
-    interface::{Either, auth::RETURN_COOKIE},
+    interface::{
+        Either,
+        auth::{RETURN_COOKIE, create_reset_password, create_user},
+    },
     tracking::{InfoHash, TorrentLibrary},
 };
 
@@ -20,13 +23,13 @@ use crate::{
 struct Storage(sqlx::SqlitePool);
 
 async fn database_init(rocket: rocket::Rocket<rocket::Build>) -> rocket::fairing::Result {
-    let connection = match Storage::fetch(&rocket) {
+    let db = match Storage::fetch(&rocket) {
         Some(connection) => connection,
         None => return Err(rocket),
     };
 
     // run migrations
-    match sqlx::migrate!("./migrations").run(&**connection).await {
+    match sqlx::migrate!("./migrations").run(&**db).await {
         Ok(_) => (),
         Err(e) => {
             rocket::error!("Failed to run database migrations: {}", e);
@@ -36,7 +39,7 @@ async fn database_init(rocket: rocket::Rocket<rocket::Build>) -> rocket::fairing
 
     // display reset link if no user with a password exists
     if match sqlx::query!("SELECT TRUE FROM [user] WHERE [PASSWORD] IS NOT NULL LIMIT 1")
-        .fetch_optional(&**connection)
+        .fetch_optional(&**db)
         .await
     {
         Ok(option) => option.is_none(),
@@ -46,7 +49,7 @@ async fn database_init(rocket: rocket::Rocket<rocket::Build>) -> rocket::fairing
         }
     } {
         let user: Option<Uuid> = match sqlx::query!("SELECT [id] as \"uuid: Uuid\" FROM [user] WHERE [password] IS NULL LIMIT 1")
-            .fetch_optional(&**connection)
+            .fetch_optional(&**db)
             .await
         {
             Ok(record) => record.map(|record| record.uuid),
@@ -57,14 +60,14 @@ async fn database_init(rocket: rocket::Rocket<rocket::Build>) -> rocket::fairing
         };
 
         let token = match user {
-            Some(user_id) => match connection.reset_password(user_id).await {
+            Some(user_id) => match create_reset_password(&**db, user_id).await {
                 Ok(token) => token,
                 Err(error) => {
                     rocket::error!("Failed to create reset token: {}", error);
                     return Err(rocket);
                 }
             },
-            None => match connection.create_user("admin", true).await {
+            None => match create_user(&**db, "admin", true).await {
                 Ok(token) => token,
                 Err(error) => {
                     rocket::error!("Failed to create user: {}", error);
@@ -101,7 +104,7 @@ async fn database_init(rocket: rocket::Rocket<rocket::Build>) -> rocket::fairing
         [author] 
         FROM [torrent] ORDER BY [date] DESC"
     )
-    .fetch_all(&**connection)
+    .fetch_all(&**db)
     .await
     {
         Ok(records) => {

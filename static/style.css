@@ -551,3 +551,11 @@ a {
 	text-align: right;
 	white-space: nowrap;
 }
+
+.code {
+	display: inline-block;
+	font-family: monospace;
+	background-color: var(--ctp-crust);
+	padding: 5px 10px;
+	border-radius: 5px;
+}
