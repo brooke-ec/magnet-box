@@ -11,6 +11,43 @@
 	src: url("/static/fa-solid.woff2") format("woff2");
 }
 
+@view-transition {
+	navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: 180ms;
+	animation-timing-function: ease-in-out;
+}
+
+::view-transition-old(root) {
+	animation-name: page-fade-out;
+}
+
+::view-transition-new(root) {
+	animation-name: page-fade-in;
+}
+
+@keyframes page-fade-out {
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes page-fade-in {
+	from {
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	::view-transition-old(root),
+	::view-transition-new(root) {
+		animation-duration: 1ms;
+	}
+}
+
 .fas {
 	font-family: "Font Awesome 7 Free";
 	font-weight: 900;
