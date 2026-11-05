@@ -1,0 +1,32 @@
+{{#*inline "content"}}
+<div style="overflow-x: auto; padding: 1px">
+      <div class="torrent-list">
+        <div class="torrent-list-header" style="background-color: #f51e5e">
+          <div>Username</div>
+          <div>Role</div>
+          <div>Actions</div>
+        </div>
+        {{#each users}}
+          <div class="torrent-list-row">
+            <div><span class="fas"></span><a href="{{url}}">{{username}}</a></div>
+            <div>
+                <form action="{{role_uri}}" method="POST">
+                    <input type="checkbox" onChange="this.form.submit()" checked={{is_admin}}>
+                </form>
+                {{#if is_admin}}
+                    admin
+                {{else}}
+                    member
+                {{/if}}
+            </div>
+            <div>
+              <a href="{{reset_uri}}" class="fas"></a>
+              <a href="{{delete_uri}}" class="fas"></a>
+            </div>
+          </div>
+        {{/each}}
+      </div>
+    </div>
+{{/inline}}
+
+{{> layout }}

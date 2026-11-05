@@ -429,6 +429,8 @@ a {
 .torrent-list-row > div {
 	white-space: nowrap;
 	padding: 12px 15px;
+	align-items: center;
+	display: flex;
 	gap: 10px;
 }
 

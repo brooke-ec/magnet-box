@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT [id] as \"id: uuid::Uuid\", [username], [is_admin] as \"is_admin: bool\" FROM [user]",
+  "describe": {
+    "columns": [
+      {
+        "name": "id: uuid::Uuid",
+        "ordinal": 0,
+        "type_info": "Blob"
+      },
+      {
+        "name": "username",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "is_admin: bool",
+        "ordinal": 2,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "7b23bee3fb3c0a64b27edab75c29be5f1cad6a231f37857a1d06baddb5df2dfc"
+}

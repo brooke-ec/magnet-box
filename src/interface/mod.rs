@@ -1,6 +1,7 @@
 use crate::configuration::AppConfiguration;
+use crate::interface::admin::{delete_user_confirm, delete_user_submit, settings};
 use crate::interface::auth::{change_password, change_password_submit, login_submit, logout, profile};
-use crate::interface::torrents::{delete_confirm, delete_submit, download, upload, upload_submit};
+use crate::interface::torrents::{delete_torrent_confirm, delete_torrent_submit, download, upload, upload_submit};
 use crate::interface::{
     auth::{login, reset_password, reset_password_link, reset_password_submit},
     torrents::{list, torrent},
@@ -11,6 +12,7 @@ use rocket_dyn_templates::{
     handlebars::{Context, Handlebars, Helper, HelperResult, Output, RenderContext},
 };
 
+pub(crate) mod admin;
 pub(crate) mod auth;
 pub(crate) mod torrents;
 
@@ -41,16 +43,19 @@ pub(crate) fn faring() -> rocket::fairing::AdHoc {
             .mount(
                 "/",
                 routes![
+                    delete_torrent_confirm,
                     change_password_submit,
+                    delete_torrent_submit,
                     reset_password_submit,
                     reset_password_link,
+                    delete_user_confirm,
+                    delete_user_submit,
                     change_password,
                     reset_password,
-                    delete_confirm,
                     upload_submit,
-                    delete_submit,
                     login_submit,
                     download,
+                    settings,
                     torrent,
                     profile,
                     upload,
@@ -62,7 +67,7 @@ pub(crate) fn faring() -> rocket::fairing::AdHoc {
     })
 }
 
-#[derive(Responder)]
+#[derive(Responder, Clone, Debug, PartialEq, Eq)]
 pub(super) enum Either<L, R> {
     Left(L),
     Right(R),

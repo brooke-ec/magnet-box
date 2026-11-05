@@ -22,7 +22,7 @@ pub(crate) const RESET_COOKIE: &str = "reset-token";
 pub(crate) const RETURN_COOKIE: &str = "return-page";
 
 #[get("/change-password")]
-pub(crate) async fn change_password(user: UserSession) -> Template {
+pub(crate) async fn change_password(user: User) -> Template {
     Template::render("change-password", context! { user })
 }
 
@@ -39,7 +39,7 @@ pub(crate) struct ChangePasswordForm {
 #[post("/change-password", data = "<form>")]
 pub(crate) async fn change_password_submit(
     mut db: Connection<Storage>,
-    user: UserSession,
+    user: User,
     form: Form<ChangePasswordForm>,
 ) -> (Status, Option<Template>) {
     if form.new_password != form.confirm_password {
@@ -113,7 +113,7 @@ pub(crate) async fn change_password_submit(
 }
 
 #[get("/login")]
-pub(crate) async fn login(user: Option<UserSession>) -> Template {
+pub(crate) async fn login(user: Option<User>) -> Template {
     Template::render("login", context! { user })
 }
 
@@ -130,7 +130,7 @@ pub(crate) async fn login_submit(
     mut db: Connection<Storage>,
     cookie: &CookieJar<'_>,
     form: Form<LoginForm>,
-    user: Option<UserSession>,
+    user: Option<User>,
 ) -> Result<Redirect, (Status, Option<Template>)> {
     if user.is_some() {
         return Ok(Redirect::to(uri!(profile)));
@@ -178,7 +178,7 @@ pub(crate) async fn login_submit(
 }
 
 #[post("/logout")]
-pub(crate) async fn logout(cookie: &CookieJar<'_>, user: UserSession) -> Result<Template, Status> {
+pub(crate) async fn logout(cookie: &CookieJar<'_>, user: User) -> Result<Template, Status> {
     cookie.remove_private(SESSION_COOKIE);
     Ok(Template::render(
         "message",
@@ -187,7 +187,7 @@ pub(crate) async fn logout(cookie: &CookieJar<'_>, user: UserSession) -> Result<
 }
 
 #[get("/profile")]
-pub(crate) async fn profile(user: UserSession) -> Template {
+pub(crate) async fn profile(user: User) -> Template {
     Template::render("profile", context! {user})
 }
 
@@ -195,7 +195,7 @@ pub(crate) async fn profile(user: UserSession) -> Template {
 pub(crate) async fn reset_password(
     mut db: Connection<Storage>,
     cookie: &CookieJar<'_>,
-    user: Option<UserSession>,
+    user: Option<User>,
 ) -> Result<Template, (Status, Option<&'static str>)> {
     let token = cookie
         .get(RESET_COOKIE)
@@ -231,7 +231,7 @@ pub(crate) async fn reset_password_submit(
     mut db: Connection<Storage>,
     cookie: &CookieJar<'_>,
     form: Form<PasswordForm>,
-    user_session: Option<UserSession>,
+    user_session: Option<User>,
 ) -> Result<Redirect, (Status, Option<Either<Template, &'static str>>)> {
     let token = cookie
         .get(RESET_COOKIE)
@@ -322,14 +322,14 @@ fn session_cookie(user_id: Uuid) -> Cookie<'static> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, FromRow, Serialize)]
-pub(crate) struct UserSession {
+pub(crate) struct User {
     pub(crate) id: Uuid,
     pub(crate) username: String,
     pub(crate) is_admin: bool,
 }
 
 #[rocket::async_trait]
-impl<'r> FromRequest<'r> for UserSession {
+impl<'r> FromRequest<'r> for User {
     type Error = ();
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
@@ -359,7 +359,7 @@ impl<'r> FromRequest<'r> for UserSession {
         };
 
         let user = match sqlx::query_as!(
-            UserSession,
+            User,
             "SELECT [id] as \"id: Uuid\", [username], [is_admin] as \"is_admin: bool\" FROM [user] WHERE [id] = ? LIMIT 1",
             session.user_id
         )
@@ -379,10 +379,10 @@ impl<'r> FromRequest<'r> for UserSession {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, FromRow, Serialize)]
-pub(crate) struct AdminSession(UserSession);
+pub(crate) struct Admin(User);
 
-impl Deref for AdminSession {
-    type Target = UserSession;
+impl Deref for Admin {
+    type Target = User;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -390,12 +390,12 @@ impl Deref for AdminSession {
 }
 
 #[rocket::async_trait]
-impl<'r> FromRequest<'r> for AdminSession {
+impl<'r> FromRequest<'r> for Admin {
     type Error = ();
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        req.guard::<UserSession>().await.and_then(|user| match user.is_admin {
-            true => Outcome::Success(AdminSession(user)),
+        req.guard::<User>().await.and_then(|user| match user.is_admin {
+            true => Outcome::Success(Admin(user)),
             false => Outcome::Error((Status::Forbidden, ())),
         })
     }

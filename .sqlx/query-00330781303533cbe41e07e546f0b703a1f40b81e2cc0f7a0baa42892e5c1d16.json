@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT [username] FROM [user] WHERE [id] = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "username",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "00330781303533cbe41e07e546f0b703a1f40b81e2cc0f7a0baa42892e5c1d16"
+}

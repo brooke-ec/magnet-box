@@ -19,18 +19,18 @@ use crate::{
     configuration::AppConfiguration,
     interface::{
         Either,
-        auth::{AdminSession, UserSession},
+        auth::{Admin, User},
     },
     tracking::{InfoHash, TorrentLibrary},
 };
 
 #[get("/")]
-pub(super) async fn list(library: &State<TorrentLibrary>, user: Option<UserSession>) -> Template {
-    let mut torrents = Vec::<TorrentContext>::with_capacity(library.len());
+pub(super) async fn list(library: &State<TorrentLibrary>, user: Option<User>) -> Template {
+    let mut torrents = Vec::<TorrentListContext>::with_capacity(library.len());
 
     library
         .iter_torrents(|torrent| {
-            torrents.push(TorrentContext {
+            torrents.push(TorrentListContext {
                 download: uri!(download(format!("{}.torrent", torrent.id))).to_string(),
                 date: torrent.date.format("%Y-%m-%d").to_string(),
                 size: format_size(torrent.size, BINARY),
@@ -47,7 +47,7 @@ pub(super) async fn list(library: &State<TorrentLibrary>, user: Option<UserSessi
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq)]
-struct TorrentContext {
+struct TorrentListContext {
     download: String,
     magnet: String,
     name: String,
@@ -57,7 +57,7 @@ struct TorrentContext {
 }
 
 #[get("/upload")]
-pub(crate) async fn upload(user: UserSession) -> Template {
+pub(crate) async fn upload(user: User) -> Template {
     Template::render("upload", context! { user })
 }
 
@@ -67,7 +67,7 @@ pub(crate) async fn upload_submit(
     library: &State<TorrentLibrary>,
     mut db: Connection<Storage>,
     torrent: Form<TorrentForm>,
-    user: UserSession,
+    user: User,
 ) -> Result<Redirect, Either<Template, Status>> {
     let tracker = Tracker::from_str(&format!("{}/announce", config.url)).map_err(|e| {
         rocket::error!("Failed to parse tracker URL: {:?}", e);
@@ -209,7 +209,7 @@ struct FileTreeItem {
 pub(crate) async fn torrent(
     id: &str,
     library: &State<TorrentLibrary>,
-    user: Option<UserSession>,
+    user: Option<User>,
     mut db: Connection<Storage>,
 ) -> Result<Template, Status> {
     let id = Uuid::parse_str(id).map_err(|_| Status::NotFound)?;
@@ -285,7 +285,7 @@ pub(crate) async fn download(id: &str, mut db: Connection<Storage>) -> Result<(C
 }
 
 #[get("/torrent/<id>/delete")]
-pub(crate) async fn delete_confirm(id: &str, user: AdminSession, library: &State<TorrentLibrary>) -> Result<Template, Status> {
+pub(crate) async fn delete_torrent_confirm(id: &str, user: Admin, library: &State<TorrentLibrary>) -> Result<Template, Status> {
     let id = Uuid::parse_str(id).map_err(|_| Status::NotFound)?;
     let torrent = library.get_torrent(&id).await.ok_or(Status::NotFound)?;
 
@@ -299,9 +299,9 @@ pub(crate) async fn delete_confirm(id: &str, user: AdminSession, library: &State
 }
 
 #[post("/torrent/<id>/delete")]
-pub(crate) async fn delete_submit(
+pub(crate) async fn delete_torrent_submit(
     id: &str,
-    user: AdminSession,
+    user: Admin,
     mut db: Connection<Storage>,
     library: &State<TorrentLibrary>,
 ) -> Result<Template, Status> {
