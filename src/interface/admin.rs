@@ -1,7 +1,7 @@
 use crate::{
     Storage,
     configuration::AppConfiguration,
-    interface::auth::{Admin, User, create_reset_password, get_username},
+    interface::auth::{Admin, User, create_reset_password, create_user, get_username},
 };
 use rocket::{State, form::Form, http::Status};
 use rocket_db_pools::Connection;
@@ -119,4 +119,31 @@ pub(crate) async fn change_user_role(
         "message",
         context! { user, message: "🔑 User role updated successfully." },
     ))
+}
+
+#[get("/admin/new")]
+pub(crate) async fn new_user_form(user: Admin) -> Result<Template, Status> {
+    Ok(Template::render("new-user", context! { user }))
+}
+
+#[derive(FromForm, Debug, Clone, PartialEq, Eq)]
+pub(crate) struct NewUserForm {
+    pub(crate) username: String,
+    pub(crate) admin: bool,
+}
+
+#[post("/admin/new", data = "<form>")]
+pub(crate) async fn new_user_submit(
+    user: Admin,
+    mut db: Connection<Storage>,
+    form: Form<NewUserForm>,
+    config: &State<AppConfiguration>,
+) -> Result<Template, Status> {
+    let token = create_user(&mut **db, &form.username, form.admin).await.map_err(|e| {
+        rocket::error!("Failed to create new user: {}", e);
+        Status::InternalServerError
+    })?;
+
+    let url = format!("{}{}", config.url, uri!(crate::interface::auth::reset_password_link(token)));
+    Ok(Template::render("display-reset-link", context! { user, url }))
 }

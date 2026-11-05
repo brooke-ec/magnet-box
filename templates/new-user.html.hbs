@@ -1,0 +1,14 @@
+{{#*inline "content"}}
+  <main>
+    <h1>Create User</h1>
+    <p>Use this form to create a new user, you will be able to copy a reset password link on the next page.</p>
+    <form method="POST">
+      <label for="username">Username:</label>
+      <input type="text" id="username" name="username" required>
+      <label class="row gap"><input type="checkbox" name="admin"> Is admin</label>
+      <button type="submit">Create</button>
+    </form>
+  </main>
+{{/inline}}
+
+{{> layout }}

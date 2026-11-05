@@ -1,5 +1,7 @@
 use crate::configuration::AppConfiguration;
-use crate::interface::admin::{change_user_role, delete_user_confirm, delete_user_submit, reset_user_password, settings};
+use crate::interface::admin::{
+    change_user_role, delete_user_confirm, delete_user_submit, new_user_form, new_user_submit, reset_user_password, settings,
+};
 use crate::interface::auth::{change_password, change_password_submit, login_submit, logout, profile};
 use crate::interface::torrents::{delete_torrent_confirm, delete_torrent_submit, download, upload, upload_submit};
 use crate::interface::{
@@ -53,8 +55,10 @@ pub(crate) fn faring() -> rocket::fairing::AdHoc {
                     delete_user_submit,
                     change_user_role,
                     change_password,
+                    new_user_submit,
                     reset_password,
                     upload_submit,
+                    new_user_form,
                     login_submit,
                     download,
                     settings,
