@@ -11,7 +11,7 @@
             <div><span class="fas"></span><a href="{{url}}">{{username}}</a></div>
             <div>
                 <form action="{{role_uri}}" method="POST">
-                    <input type="checkbox" onChange="this.form.submit()" checked={{is_admin}}>
+                    <input type="checkbox" {{#if other}}disabled{{/if}} name="is_admin" onChange="this.form.submit()" checked={{is_admin}}>
                 </form>
                 {{#if is_admin}}
                     admin
@@ -20,8 +20,8 @@
                 {{/if}}
             </div>
             <div>
-              <a href="{{reset_uri}}" class="fas"></a>
-              <a href="{{delete_uri}}" class="fas"></a>
+              <a {{#if other}}disabled{{/if}} href="{{reset_uri}}" class="fas"></a>
+              <a {{#if other}}disabled{{/if}} href="{{delete_uri}}" class="fas"></a>
             </div>
           </div>
         {{/each}}

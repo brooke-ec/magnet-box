@@ -3,7 +3,7 @@ use crate::{
     configuration::AppConfiguration,
     interface::auth::{Admin, User, create_reset_password, get_username},
 };
-use rocket::{State, http::Status};
+use rocket::{State, form::Form, http::Status};
 use rocket_db_pools::Connection;
 use rocket_dyn_templates::{Template, context};
 use serde::Serialize;
@@ -22,11 +22,12 @@ pub(crate) async fn settings(user: Admin, mut db: Connection<Storage>) -> Result
         Status::InternalServerError
     })?
     .into_iter()
-    .map(|user| UserListContext {
-        delete_uri: uri!(delete_user_confirm(user.id.to_string())).to_string(),
-        reset_uri: uri!(reset_user_password(user.id.to_string())).to_string(),
-        role_uri: "".to_string(),
-        user,
+    .map(|u| UserListContext {
+        delete_uri: uri!(delete_user_confirm(u.id.to_string())).to_string(),
+        reset_uri: uri!(reset_user_password(u.id.to_string())).to_string(),
+        role_uri: uri!(change_user_role(u.id.to_string())).to_string(),
+        other: user.id == u.id,
+        user: u,
     })
     .collect::<Vec<_>>();
 
@@ -38,6 +39,7 @@ struct UserListContext {
     delete_uri: String,
     reset_uri: String,
     role_uri: String,
+    other: bool,
     #[serde(flatten)]
     user: User,
 }
@@ -89,4 +91,32 @@ pub(crate) async fn reset_user_password(
 
     let url = format!("{}{}", config.url, uri!(crate::interface::auth::reset_password_link(token)));
     Ok(Template::render("display-reset-link", context! { user, url }))
+}
+
+#[derive(FromForm, Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ChangeUserRoleForm {
+    pub(crate) is_admin: bool,
+}
+
+#[post("/admin/<id>/role", data = "<form>")]
+pub(crate) async fn change_user_role(
+    id: &str,
+    user: Admin,
+    mut db: Connection<Storage>,
+    form: Form<ChangeUserRoleForm>,
+) -> Result<Template, Status> {
+    let id = Uuid::parse_str(id).map_err(|_| Status::NotFound)?;
+
+    sqlx::query!("UPDATE [user] SET [is_admin] = ? WHERE [id] = ?", form.is_admin, id)
+        .execute(&mut **db)
+        .await
+        .map_err(|e| {
+            rocket::error!("Failed to change user role in database: {}", e);
+            Status::InternalServerError
+        })?;
+
+    Ok(Template::render(
+        "message",
+        context! { user, message: "🔑 User role updated successfully." },
+    ))
 }
