@@ -31,7 +31,7 @@ pub(super) async fn list(library: &State<TorrentLibrary>, user: Option<User>) ->
     library
         .iter_torrents(|torrent| {
             torrents.push(TorrentListContext {
-                download: uri!(download(format!("{}.torrent", torrent.id))).to_string(),
+                download: uri!(download(torrent.id.to_string(), format!("{}.torrent", torrent.name))).to_string(),
                 date: torrent.date.format("%Y-%m-%d").to_string(),
                 size: format_size(torrent.size, BINARY),
                 url: format!("/torrent/{}", torrent.id),
@@ -265,15 +265,15 @@ pub(crate) async fn torrent(
             leechers: torrent.leechers,
             size: format_size(torrent.size, BINARY),
             date: torrent.date.format("%Y-%m-%d").to_string(),
-            download: uri!(download(format!("{}.torrent", torrent.id))).to_string()
+            download: uri!(download(torrent.id.to_string(), format!("{}.torrent", torrent.name))).to_string()
         },
     ))
 }
 
-#[get("/torrent/<id>/download")]
-pub(crate) async fn download(id: &str, mut db: Connection<Storage>) -> Result<(ContentType, Vec<u8>), Status> {
-    let id = Uuid::parse_str(&id[..id.len() - 8]).map_err(|_| Status::NotFound)?;
-    let a = sqlx::query!("SELECT [metainfo] FROM [torrent] WHERE [id] = ?", id)
+#[get("/torrent/<id>/download/<name>")]
+pub(crate) async fn download(id: &str, name: &str, mut db: Connection<Storage>) -> Result<(ContentType, Vec<u8>), Status> {
+    let id = Uuid::parse_str(&id).map_err(|_| Status::NotFound)?;
+    let torrent = sqlx::query!("SELECT [metainfo], [name] FROM [torrent] WHERE [id] = ?", id)
         .fetch_one(&mut **db)
         .await
         .map_err(|e| {
@@ -281,7 +281,11 @@ pub(crate) async fn download(id: &str, mut db: Connection<Storage>) -> Result<(C
             Status::InternalServerError
         })?;
 
-    Ok((ContentType::new("application", "x-bittorrent"), a.metainfo))
+    if torrent.name != &name[..name.len() - 8] {
+        return Err(Status::NotFound);
+    }
+
+    Ok((ContentType::new("application", "x-bittorrent"), torrent.metainfo))
 }
 
 #[get("/torrent/<id>/delete")]

@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT [metainfo], [name] FROM [torrent] WHERE [id] = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "metainfo",
+        "ordinal": 0,
+        "type_info": "Blob"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "a9490d40ada29438559ce90825db4408695b01909d4c534a484d8aba21dfb16d"
+}

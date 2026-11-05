@@ -3,6 +3,7 @@ use crate::interface::admin::{
     change_user_role, delete_user_confirm, delete_user_submit, new_user_form, new_user_submit, reset_user_password, settings,
 };
 use crate::interface::auth::{change_password, change_password_submit, login_submit, logout, profile};
+use crate::interface::feed::torrent_feed;
 use crate::interface::torrents::{delete_torrent_confirm, delete_torrent_submit, download, upload, upload_submit};
 use crate::interface::{
     auth::{login, reset_password, reset_password_link, reset_password_submit},
@@ -16,6 +17,7 @@ use rocket_dyn_templates::{
 
 pub(crate) mod admin;
 pub(crate) mod auth;
+pub(crate) mod feed;
 pub(crate) mod torrents;
 
 /// Returns a fairing that mounts the frontend endpoints.
@@ -60,6 +62,7 @@ pub(crate) fn faring() -> rocket::fairing::AdHoc {
                     upload_submit,
                     new_user_form,
                     login_submit,
+                    torrent_feed,
                     download,
                     settings,
                     torrent,
