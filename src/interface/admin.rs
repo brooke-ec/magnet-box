@@ -31,7 +31,7 @@ pub(crate) async fn settings(user: Admin, mut db: Connection<Storage>) -> Result
     })
     .collect::<Vec<_>>();
 
-    Ok(Template::render("admin", context! { user, users }))
+    Ok(Template::render("admin/list", context! { user, users }))
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq)]
@@ -44,7 +44,7 @@ struct UserListContext {
     user: User,
 }
 
-#[get("/admin/<id>/delete")]
+#[get("/admin/user/<id>/delete")]
 pub(crate) async fn delete_user_confirm(id: &str, user: Admin, mut db: Connection<Storage>) -> Result<Template, Status> {
     let id = Uuid::parse_str(id).map_err(|_| Status::NotFound)?;
     let username = get_username(&mut **db, id)
@@ -55,10 +55,10 @@ pub(crate) async fn delete_user_confirm(id: &str, user: Admin, mut db: Connectio
         })?
         .ok_or(Status::NotFound)?;
 
-    Ok(Template::render("delete-user", context! { user, username }))
+    Ok(Template::render("admin/delete-user", context! { user, username }))
 }
 
-#[post("/admin/<id>/delete")]
+#[post("/admin/user/<id>/delete")]
 pub(crate) async fn delete_user_submit(id: &str, user: Admin, mut db: Connection<Storage>) -> Result<Template, Status> {
     let id = Uuid::parse_str(id).map_err(|_| Status::NotFound)?;
     sqlx::query!("DELETE FROM [user] WHERE [id] = ?", id)
@@ -75,7 +75,7 @@ pub(crate) async fn delete_user_submit(id: &str, user: Admin, mut db: Connection
     ))
 }
 
-#[get("/admin/<id>/reset-password")]
+#[get("/admin/user/<id>/reset-password")]
 pub(crate) async fn reset_user_password(
     id: &str,
     user: Admin,
@@ -90,7 +90,7 @@ pub(crate) async fn reset_user_password(
     })?;
 
     let url = format!("{}{}", config.url, uri!(crate::interface::auth::reset_password_link(token)));
-    Ok(Template::render("display-reset-link", context! { user, url }))
+    Ok(Template::render("admin/display-reset-link", context! { user, url }))
 }
 
 #[derive(FromForm, Debug, Clone, PartialEq, Eq)]
@@ -98,7 +98,7 @@ pub(crate) struct ChangeUserRoleForm {
     pub(crate) is_admin: bool,
 }
 
-#[post("/admin/<id>/role", data = "<form>")]
+#[post("/admin/user/<id>/set-role", data = "<form>")]
 pub(crate) async fn change_user_role(
     id: &str,
     user: Admin,
@@ -121,9 +121,9 @@ pub(crate) async fn change_user_role(
     ))
 }
 
-#[get("/admin/new")]
+#[get("/admin/user/create")]
 pub(crate) async fn new_user_form(user: Admin) -> Result<Template, Status> {
-    Ok(Template::render("new-user", context! { user }))
+    Ok(Template::render("admin/create-user", context! { user }))
 }
 
 #[derive(FromForm, Debug, Clone, PartialEq, Eq)]
@@ -132,7 +132,7 @@ pub(crate) struct NewUserForm {
     pub(crate) admin: bool,
 }
 
-#[post("/admin/new", data = "<form>")]
+#[post("/admin/user/create", data = "<form>")]
 pub(crate) async fn new_user_submit(
     user: Admin,
     mut db: Connection<Storage>,
@@ -145,5 +145,5 @@ pub(crate) async fn new_user_submit(
     })?;
 
     let url = format!("{}{}", config.url, uri!(crate::interface::auth::reset_password_link(token)));
-    Ok(Template::render("display-reset-link", context! { user, url }))
+    Ok(Template::render("admin/display-reset-link", context! { user, url }))
 }

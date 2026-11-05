@@ -8,7 +8,7 @@
     </div>
     {{#each users}}
       <div class="torrent-list-row">
-        <div><span class="fas"></span><a href="{{url}}">{{username}}</a></div>
+        <div><span class="fas"></span>{{username}}</div>
         <div>
             <form action="{{role_uri}}" method="POST">
                 <input type="checkbox" {{#if other}}disabled{{/if}} name="is_admin" onChange="this.form.submit()" checked={{is_admin}}>
@@ -28,7 +28,7 @@
   </div>
 </div>
 
-<a class="box" href="/admin/new">
+<a class="box" href="/admin/user/create">
   <span>New User</span>
   <span class="fas" style="margin-left: 10px;"></span>
 </a>

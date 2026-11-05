@@ -43,7 +43,7 @@ pub(super) async fn list(library: &State<TorrentLibrary>, user: Option<User>) ->
         })
         .await;
 
-    Template::render("index", context! { user, torrents })
+    Template::render("torrent/list", context! { user, torrents })
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq)]
@@ -56,12 +56,12 @@ struct TorrentListContext {
     url: String,
 }
 
-#[get("/upload")]
+#[get("/torrent/upload")]
 pub(crate) async fn upload(user: User) -> Template {
-    Template::render("upload", context! { user })
+    Template::render("torrent/upload", context! { user })
 }
 
-#[post("/upload", data = "<torrent>")]
+#[post("/torrent/upload", data = "<torrent>")]
 pub(crate) async fn upload_submit(
     config: &State<AppConfiguration>,
     library: &State<TorrentLibrary>,
@@ -76,7 +76,7 @@ pub(crate) async fn upload_submit(
 
     if !torrent.trackers().contains(&tracker) {
         return Err(Either::Left(Template::render(
-            "upload",
+            "torrent/upload",
             context! { user, error: format!("Torrent must contain the tracker: '{}'", tracker.url()) },
         )));
     }
@@ -121,7 +121,7 @@ pub(crate) async fn upload_submit(
         Err(e) => {
             return Err(if e.as_database_error().is_some_and(|e| e.is_unique_violation()) {
                 Either::Left(Template::render(
-                    "upload",
+                    "torrent/upload",
                     context! { user, error: "Torrent has already been uploaded" },
                 ))
             } else {
@@ -253,7 +253,7 @@ pub(crate) async fn torrent(
     }
 
     Ok(Template::render(
-        "torrent",
+        "torrent/torrent",
         context! {
             user,
             tree,
@@ -290,7 +290,7 @@ pub(crate) async fn delete_torrent_confirm(id: &str, user: Admin, library: &Stat
     let torrent = library.get_torrent(&id).await.ok_or(Status::NotFound)?;
 
     Ok(Template::render(
-        "delete-torrent",
+        "torrent/delete-torrent",
         context! {
             name: &torrent.name,
             user

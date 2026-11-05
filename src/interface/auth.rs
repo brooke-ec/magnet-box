@@ -21,9 +21,9 @@ pub(crate) const SESSION_COOKIE: &str = "session-token";
 pub(crate) const RESET_COOKIE: &str = "reset-token";
 pub(crate) const RETURN_COOKIE: &str = "return-page";
 
-#[get("/change-password")]
+#[get("/auth/change-password")]
 pub(crate) async fn change_password(user: User) -> Template {
-    Template::render("change-password", context! { user })
+    Template::render("auth/change-password", context! { user })
 }
 
 #[derive(FromForm, Debug, Clone, PartialEq, Eq)]
@@ -36,7 +36,7 @@ pub(crate) struct ChangePasswordForm {
     confirm_password: String,
 }
 
-#[post("/change-password", data = "<form>")]
+#[post("/auth/change-password", data = "<form>")]
 pub(crate) async fn change_password_submit(
     mut db: Connection<Storage>,
     user: User,
@@ -46,7 +46,7 @@ pub(crate) async fn change_password_submit(
         return (
             Status::BadRequest,
             Some(Template::render(
-                "change-password",
+                "auth/change-password",
                 context! { user, error: "New passwords do not match" },
             )),
         );
@@ -56,7 +56,7 @@ pub(crate) async fn change_password_submit(
         return (
             Status::BadRequest,
             Some(Template::render(
-                "change-password",
+                "auth/change-password",
                 context! { user, error: "New password must be at least 6 characters long" },
             )),
         );
@@ -75,7 +75,7 @@ pub(crate) async fn change_password_submit(
             return (
                 Status::Unauthorized,
                 Some(Template::render(
-                    "change-password",
+                    "auth/change-password",
                     context! { user, error: "Current password is incorrect" },
                 )),
             );
@@ -84,7 +84,7 @@ pub(crate) async fn change_password_submit(
         return (
             Status::Unauthorized,
             Some(Template::render(
-                "change-password",
+                "auth/change-password",
                 context! { user, error: "Current password is incorrect" },
             )),
         );
@@ -112,9 +112,9 @@ pub(crate) async fn change_password_submit(
     )
 }
 
-#[get("/login")]
+#[get("/auth/login")]
 pub(crate) async fn login(user: Option<User>) -> Template {
-    Template::render("login", context! { user })
+    Template::render("auth/login", context! { user })
 }
 
 #[derive(FromForm, Debug, Clone, PartialEq, Eq)]
@@ -125,7 +125,7 @@ pub(crate) struct LoginForm {
     confirm: String,
 }
 
-#[post("/login", data = "<form>")]
+#[post("/auth/login", data = "<form>")]
 pub(crate) async fn login_submit(
     mut db: Connection<Storage>,
     cookie: &CookieJar<'_>,
@@ -148,20 +148,20 @@ pub(crate) async fn login_submit(
     })?
     .ok_or((
         Status::Unauthorized,
-        Some(Template::render("login", context! { error: "invalid username or password" })),
+        Some(Template::render("auth/login", context! { error: "invalid username or password" })),
     ))?;
 
     if let Some(password) = user.password {
         if password_auth::verify_password(&form.confirm, &password).is_err() {
             return Err((
                 Status::Unauthorized,
-                Some(Template::render("login", context! { error: "invalid username or password" })),
+                Some(Template::render("auth/login", context! { error: "invalid username or password" })),
             ));
         }
     } else {
         return Err((
             Status::Unauthorized,
-            Some(Template::render("login", context! { error: "invalid username or password" })),
+            Some(Template::render("auth/login", context! { error: "invalid username or password" })),
         ));
     }
 
@@ -177,7 +177,7 @@ pub(crate) async fn login_submit(
     Ok(Redirect::to(return_page))
 }
 
-#[post("/logout")]
+#[post("/auth/logout")]
 pub(crate) async fn logout(cookie: &CookieJar<'_>, user: User) -> Result<Template, Status> {
     cookie.remove_private(SESSION_COOKIE);
     Ok(Template::render(
@@ -186,12 +186,12 @@ pub(crate) async fn logout(cookie: &CookieJar<'_>, user: User) -> Result<Templat
     ))
 }
 
-#[get("/profile")]
+#[get("/auth/profile")]
 pub(crate) async fn profile(user: User) -> Template {
-    Template::render("profile", context! {user})
+    Template::render("auth/profile", context! {user})
 }
 
-#[get("/reset-password")]
+#[get("/auth/reset-password")]
 pub(crate) async fn reset_password(
     mut db: Connection<Storage>,
     cookie: &CookieJar<'_>,
@@ -215,7 +215,7 @@ pub(crate) async fn reset_password(
     .ok_or((Status::Gone, Some("password reset token is invalid")))?
     .username;
 
-    Ok(Template::render("reset-password", context! { user, username }))
+    Ok(Template::render("auth/reset-password", context! { user, username }))
 }
 
 #[derive(FromForm, Debug, Clone, PartialEq, Eq)]
@@ -226,7 +226,7 @@ pub(crate) struct PasswordForm {
     confirm: String,
 }
 
-#[post("/reset-password", data = "<form>")]
+#[post("/auth/reset-password", data = "<form>")]
 pub(crate) async fn reset_password_submit(
     mut db: Connection<Storage>,
     cookie: &CookieJar<'_>,
@@ -254,7 +254,7 @@ pub(crate) async fn reset_password_submit(
         return Err((
             Status::BadRequest,
             Some(Either::Left(Template::render(
-                "reset-password",
+                "auth/reset-password",
                 context! { user: user_session, username: user.username, error: "Passwords do not match" },
             ))),
         ));
@@ -264,7 +264,7 @@ pub(crate) async fn reset_password_submit(
         return Err((
             Status::BadRequest,
             Some(Either::Left(Template::render(
-                "reset-password",
+                "auth/reset-password",
                 context! { user: user_session, username: user.username, error: "Password must be at least 8 characters long" },
             ))),
         ));
@@ -290,7 +290,7 @@ pub(crate) async fn reset_password_submit(
     Ok(Redirect::to(uri!(profile)))
 }
 
-#[get("/reset-password/<token>")]
+#[get("/auth/reset-password/<token>")]
 pub(crate) async fn reset_password_link(token: &str, cookies: &CookieJar<'_>) -> Redirect {
     cookies.add(Cookie::new(RESET_COOKIE, token.to_string()));
     Redirect::to(uri!(reset_password))
