@@ -5,7 +5,14 @@ mod configuration;
 mod interface;
 mod tracking;
 
-use rocket::{Config, Request, fairing::AdHoc, fs::FileServer, futures::future::try_join_all, http::Cookie, response::Redirect};
+use rocket::{
+    Config, Request,
+    fairing::AdHoc,
+    fs::{FileServer, NamedFile},
+    futures::future::try_join_all,
+    http::Cookie,
+    response::Redirect,
+};
 use rocket_db_pools::Database;
 use uuid::Uuid;
 
@@ -150,6 +157,11 @@ fn unauthorized(request: &Request<'_>) -> Either<Redirect, &'static str> {
     }
 }
 
+#[rocket::get("/favicon.ico")]
+async fn favicon() -> Option<NamedFile> {
+    NamedFile::open("static/favicon.ico").await.ok()
+}
+
 #[main]
 async fn main() -> Result<(), rocket::Error> {
     rocket::build()
@@ -158,6 +170,7 @@ async fn main() -> Result<(), rocket::Error> {
         .mount("/static", FileServer::from("static"))
         .attach(AdHoc::config::<AppConfiguration>())
         .register("/", catchers![unauthorized])
+        .mount("/", rocket::routes![favicon])
         .manage(TorrentLibrary::new().await)
         .attach(interface::faring())
         .attach(tracking::faring())
