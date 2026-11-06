@@ -103,7 +103,7 @@ impl<'r> FromRequest<'r> for CsrfGuard {
 
     async fn from_request(request: &'r rocket::Request<'_>) -> Outcome<Self, ()> {
         let sec_fetch_site = request.headers().get_one("Sec-Fetch-Site");
-        if matches!(sec_fetch_site, Some("cross-site")) {
+        if !matches!(sec_fetch_site, Some("same-origin") | Some("same-site")) {
             return Outcome::Error((Status::Forbidden, ()));
         }
 
@@ -111,10 +111,16 @@ impl<'r> FromRequest<'r> for CsrfGuard {
     }
 }
 
+impl CsrfGuard {
+    pub(crate) fn validate(&self) -> bool {
+        true
+    }
+}
+
 fn csp() -> &'static str {
     "default-src 'self'; \
-     script-src 'self' 'unsafe-inline' cdn.jsdelivr.net; \
-     style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; \
+     script-src 'self'; \
+     style-src 'self'; \
      img-src 'self' data:; \
      font-src 'self'; \
      frame-ancestors 'none'; \

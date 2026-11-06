@@ -63,7 +63,7 @@ pub(crate) async fn delete_user_confirm(id: &str, user: Admin, mut db: Connectio
 
 #[post("/admin/user/<id>/delete")]
 pub(crate) async fn delete_user_submit(csrf: CsrfGuard, id: &str, user: Admin, mut db: Connection<Storage>) -> Result<Template, Status> {
-    let _ = csrf;
+    csrf.validate();
     let id = Uuid::parse_str(id).map_err(|_| Status::NotFound)?;
     sqlx::query!("DELETE FROM [user] WHERE [id] = ?", id)
         .execute(&mut **db)
@@ -110,7 +110,7 @@ pub(crate) async fn change_user_role(
     mut db: Connection<Storage>,
     form: Form<ChangeUserRoleForm>,
 ) -> Result<Template, Status> {
-    let _ = csrf;
+    csrf.validate();
     let id = Uuid::parse_str(id).map_err(|_| Status::NotFound)?;
 
     sqlx::query!("UPDATE [user] SET [is_admin] = ? WHERE [id] = ?", form.is_admin, id)
@@ -146,7 +146,7 @@ pub(crate) async fn new_user_submit(
     form: Form<NewUserForm>,
     config: &State<AppConfiguration>,
 ) -> Result<Template, Status> {
-    let _ = csrf;
+    csrf.validate();
     let token = create_user(&mut **db, &form.username, form.admin).await.map_err(|e| {
         rocket::error!("Failed to create new user: {}", e);
         Status::InternalServerError

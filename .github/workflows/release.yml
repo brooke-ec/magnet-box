@@ -16,7 +16,7 @@ jobs:
               uses: docker/metadata-action@v6
               with:
                   images: |
-                      ghcr.io/brooke-ec/magnet-boxy
+                      ghcr.io/brooke-ec/magnet-box
                   tags: |
                       type=raw,value=latest,enable={{is_default_branch}}
                       type=semver,pattern={{major}}.{{minor}}

@@ -74,7 +74,7 @@ pub(crate) async fn upload_submit(
     torrent: Form<TorrentForm>,
     user: User,
 ) -> Result<Redirect, Either<Template, Status>> {
-    let _ = csrf;
+    csrf.validate();
     let tracker = Tracker::from_str(&format!("{}/announce", config.url)).map_err(|e| {
         rocket::error!("Failed to parse tracker URL: {:?}", e);
         Either::Right(Status::InternalServerError)
@@ -328,7 +328,7 @@ pub(crate) async fn delete_torrent_submit(
     mut db: Connection<Storage>,
     library: &State<TorrentLibrary>,
 ) -> Result<Template, Status> {
-    let _ = csrf;
+    csrf.validate();
     let id = Uuid::parse_str(id).map_err(|_| Status::NotFound)?;
 
     sqlx::query!("DELETE FROM [torrent] WHERE [id] = ?", id)

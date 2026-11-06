@@ -46,7 +46,7 @@ pub(crate) async fn change_password_submit(
     user: User,
     form: Form<ChangePasswordForm>,
 ) -> (Status, Option<Template>) {
-    let _ = csrf;
+    csrf.validate();
     if form.new_password != form.confirm_password {
         return (
             Status::BadRequest,
@@ -124,10 +124,8 @@ pub(crate) async fn login(user: Option<User>) -> Template {
 
 #[derive(FromForm, Debug, Clone, PartialEq, Eq)]
 pub(crate) struct LoginForm {
-    #[field(name = "username")]
+    username: String,
     password: String,
-    #[field(name = "password")]
-    confirm: String,
 }
 
 #[post("/auth/login", data = "<form>")]
@@ -138,14 +136,14 @@ pub(crate) async fn login_submit(
     form: Form<LoginForm>,
     user: Option<User>,
 ) -> Result<Redirect, (Status, Option<Template>)> {
-    let _ = csrf;
+    csrf.validate();
     if user.is_some() {
         return Ok(Redirect::to(uri!(profile)));
     }
 
     let user = sqlx::query!(
         "SELECT [id] as \"uuid: Uuid\", [password] FROM [user] WHERE [username] = ? LIMIT 1",
-        form.password
+        form.username
     )
     .fetch_optional(&mut **db)
     .await
@@ -159,7 +157,7 @@ pub(crate) async fn login_submit(
     ))?;
 
     if let Some(password) = user.password {
-        if password_auth::verify_password(&form.confirm, &password).is_err() {
+        if password_auth::verify_password(&form.password, &password).is_err() {
             return Err((
                 Status::Unauthorized,
                 Some(Template::render("auth/login", context! { error: "invalid username or password" })),
@@ -186,7 +184,7 @@ pub(crate) async fn login_submit(
 
 #[post("/auth/logout")]
 pub(crate) async fn logout(csrf: CsrfGuard, cookie: &CookieJar<'_>, user: User) -> Result<Template, Status> {
-    let _ = csrf;
+    csrf.validate();
     cookie.remove_private(SESSION_COOKIE);
     Ok(Template::render(
         "message",
@@ -242,7 +240,7 @@ pub(crate) async fn reset_password_submit(
     form: Form<PasswordForm>,
     user_session: Option<User>,
 ) -> Result<Redirect, (Status, Option<Either<Template, &'static str>>)> {
-    let _ = csrf;
+    csrf.validate();
     let token = cookie
         .get(RESET_COOKIE)
         .ok_or((Status::BadRequest, Some(Either::Right("password reset token is invalid"))))?
@@ -275,7 +273,7 @@ pub(crate) async fn reset_password_submit(
             Status::BadRequest,
             Some(Either::Left(Template::render(
                 "auth/reset-password",
-                context! { user: user_session, username: user.username, error: "Password must be at least 8 characters long" },
+                context! { user: user_session, username: user.username, error: "Password must be at least 6 characters long" },
             ))),
         ));
     }
