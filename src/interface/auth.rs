@@ -300,7 +300,13 @@ pub(crate) async fn reset_password_submit(
 
 #[get("/auth/reset-password/<token>")]
 pub(crate) async fn reset_password_link(token: &str, cookies: &CookieJar<'_>) -> Redirect {
-    cookies.add(Cookie::new(RESET_COOKIE, token.to_string()));
+    cookies.add(
+        Cookie::build((RESET_COOKIE, token.to_string()))
+            .secure(true)
+            .same_site(SameSite::Strict)
+            .build(),
+    );
+
     Redirect::to(uri!(reset_password))
 }
 
@@ -327,7 +333,7 @@ fn session_cookie(user_id: Uuid) -> Cookie<'static> {
     ))
     .max_age(Duration::days(1))
     .secure(true)
-    .same_site(SameSite::Lax)
+    .same_site(SameSite::Strict)
     .build()
 }
 
