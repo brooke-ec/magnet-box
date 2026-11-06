@@ -39,6 +39,8 @@ pub(super) enum AnnounceEvent {
     Completed,
     #[serde(rename = "stopped")]
     Stopped,
+    #[serde(rename = "paused")]
+    Paused,
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
