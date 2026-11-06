@@ -21,7 +21,6 @@ use crate::{
 };
 
 pub(crate) const SESSION_COOKIE: &str = "session-token";
-pub(crate) const RESET_COOKIE: &str = "reset-token";
 pub(crate) const RETURN_COOKIE: &str = "return-page";
 
 #[get("/auth/change-password")]
@@ -197,17 +196,12 @@ pub(crate) async fn profile(user: User) -> Template {
     Template::render("auth/profile", context! {user})
 }
 
-#[get("/auth/reset-password")]
-pub(crate) async fn reset_password(
+#[get("/auth/reset-password/<token>")]
+pub(crate) async fn reset_password_link(
     mut db: Connection<Storage>,
-    cookie: &CookieJar<'_>,
     user: Option<User>,
+    token: &str,
 ) -> Result<Template, (Status, Option<&'static str>)> {
-    let token = cookie
-        .get(RESET_COOKIE)
-        .ok_or((Status::BadRequest, Some("password reset token is invalid")))?
-        .value();
-
     let username: String = sqlx::query!(
         "SELECT [username] FROM [user] WHERE [reset_token] = ? AND [reset_token_expiry] > CURRENT_TIMESTAMP LIMIT 1",
         token
@@ -221,19 +215,18 @@ pub(crate) async fn reset_password(
     .ok_or((Status::Gone, Some("password reset token is invalid")))?
     .username;
 
-    Ok(Template::render("auth/reset-password", context! { user, username }))
+    Ok(Template::render("auth/reset-password", context! { user, username, token }))
 }
 
 #[derive(FromForm, Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PasswordForm {
-    #[field(name = "password")]
     password: String,
-    #[field(name = "confirm")]
     confirm: String,
 }
 
-#[post("/auth/reset-password", data = "<form>")]
+#[post("/auth/reset-password/<token>", data = "<form>")]
 pub(crate) async fn reset_password_submit(
+    token: &str,
     csrf: CsrfGuard,
     mut db: Connection<Storage>,
     cookie: &CookieJar<'_>,
@@ -241,10 +234,6 @@ pub(crate) async fn reset_password_submit(
     user_session: Option<User>,
 ) -> Result<Redirect, (Status, Option<Either<Template, &'static str>>)> {
     csrf.validate();
-    let token = cookie
-        .get(RESET_COOKIE)
-        .ok_or((Status::BadRequest, Some(Either::Right("password reset token is invalid"))))?
-        .value();
 
     let user = sqlx::query!(
         "SELECT [id] as \"uuid: Uuid\", [username] FROM [user] WHERE [reset_token] = ? AND [reset_token_expiry] > CURRENT_TIMESTAMP LIMIT 1",
@@ -263,7 +252,7 @@ pub(crate) async fn reset_password_submit(
             Status::BadRequest,
             Some(Either::Left(Template::render(
                 "auth/reset-password",
-                context! { user: user_session, username: user.username, error: "Passwords do not match" },
+                context! { user: user_session, username: user.username, token: token, error: "Passwords do not match" },
             ))),
         ));
     }
@@ -273,7 +262,7 @@ pub(crate) async fn reset_password_submit(
             Status::BadRequest,
             Some(Either::Left(Template::render(
                 "auth/reset-password",
-                context! { user: user_session, username: user.username, error: "Password must be at least 6 characters long" },
+                context! { user: user_session, username: user.username, token: token, error: "Password must be at least 6 characters long" },
             ))),
         ));
     }
@@ -293,21 +282,8 @@ pub(crate) async fn reset_password_submit(
     })?;
 
     cookie.add_private(session_cookie(user.uuid));
-    cookie.remove(RESET_COOKIE);
 
     Ok(Redirect::to(uri!(profile)))
-}
-
-#[get("/auth/reset-password/<token>")]
-pub(crate) async fn reset_password_link(token: &str, cookies: &CookieJar<'_>) -> Redirect {
-    cookies.add(
-        Cookie::build((RESET_COOKIE, token.to_string()))
-            .secure(true)
-            .same_site(SameSite::Strict)
-            .build(),
-    );
-
-    Redirect::to(uri!(reset_password))
 }
 
 fn generate_token() -> String {
