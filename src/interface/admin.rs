@@ -145,12 +145,25 @@ pub(crate) async fn new_user_submit(
     mut db: Connection<Storage>,
     form: Form<NewUserForm>,
     config: &State<AppConfiguration>,
-) -> Result<Template, Status> {
+) -> Result<Template, (Status, Option<Template>)> {
     csrf.validate();
-    let token = create_user(&mut **db, &form.username, form.admin).await.map_err(|e| {
-        rocket::error!("Failed to create new user: {}", e);
-        Status::InternalServerError
-    })?;
+    let token = match create_user(&mut **db, &form.username, form.admin).await {
+        Ok(token) => token,
+        Err(e) => {
+            if e.as_database_error().is_some_and(|e| e.is_unique_violation()) {
+                return Err((
+                    Status::Conflict,
+                    Some(Template::render(
+                        "admin/create-user",
+                        context! { user, error: "A user with that username already exists." },
+                    )),
+                ));
+            }
+
+            rocket::error!("Failed to create new user: {}", e);
+            return Err((Status::InternalServerError, None));
+        }
+    };
 
     let url = format!("{}{}", config.url, uri!(crate::interface::auth::reset_password_link(token)));
     Ok(Template::render("admin/display-reset-link", context! { user, url }))

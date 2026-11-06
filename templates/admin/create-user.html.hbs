@@ -6,6 +6,9 @@
       <label for="username">Username:</label>
       <input type="text" id="username" name="username" required>
       <label class="row gap"><input type="checkbox" name="admin"> Is admin</label>
+      {{#if error}}
+        <div class="error">{{error}}</div>
+      {{/if}}
       <button type="submit">Create</button>
     </form>
   </main>
