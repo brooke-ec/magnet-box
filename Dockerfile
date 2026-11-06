@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/build/target \
     --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     set -eux; \
-    cargo install cargo-patch; \
+    cargo install cargo-patch --git https://github.com/itmettkeDE/cargo-patch --rev f99685ff --locked; \
     cargo patch; \
     cargo build --release; \
     objcopy --compress-debug-sections target/release/$pkg ./main
