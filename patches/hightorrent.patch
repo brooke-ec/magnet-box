@@ -1,0 +1,13 @@
+--- src/torrent_file.rs
++++ src/torrent_file.rs
+@@ -148,10 +148,6 @@
+             return Ok(files);
+         }
+ 
+-        if let Some(_info_file_tree) = &self.info.file_tree {
+-            todo!("v2 torrent files");
+-        }
+-
+         // V1 torrent with single file
+         Ok(vec![TorrentContent {
+             path: PathBuf::from(&self.info.name),

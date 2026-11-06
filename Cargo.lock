@@ -999,8 +999,6 @@ dependencies = [
 [[package]]
 name = "hightorrent"
 version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47427359411eab613e38d102e22c335560af3b539c7b14dec9a1007a7cdbc2f8"
 dependencies = [
  "bt_bencode",
  "fluent-uri",

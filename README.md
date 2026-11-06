@@ -11,12 +11,14 @@ Recommended installation using [Docker Compose](https://docs.docker.com/compose/
 ```yml
 services:
     magnet-box:
-        image: ghcr.io/brooke-ec/magnet-box:latest
+        build: .
+        ports:
+            - 8080:8080
         restart: unless-stopped
         volumes:
             - ./data:/data
         environment:
-            ROCKET_SECRET_KEY: "your_secret_key_here" # generate with `openssl rand -base64 32`
+            ROCKET_SECRET_KEY: "this_will_error_see_comment" # generate with `openssl rand -base64 32`
             ROCKET_URL: "https://example.com" # replace with your domain
 ```
 

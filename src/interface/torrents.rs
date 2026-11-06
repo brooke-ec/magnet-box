@@ -81,6 +81,18 @@ pub(crate) async fn upload_submit(
         )));
     }
 
+    let files = torrent.decoded.files().map_err(|e| {
+        rocket::error!("Failed to decode torrent files: {:?}", e);
+        Either::Right(Status::InternalServerError)
+    })?;
+
+    if files.is_empty() {
+        return Err(Either::Left(Template::render(
+            "torrent/upload",
+            context! { user, error: "Could not upload torrent. Maybe it was invalid or a v2 torrent?" },
+        )));
+    }
+
     let (v1_hash, v2_hash) = match &torrent.hash {
         hightorrent::InfoHash::Hybrid((v1, v2)) => (Some(hex::decode(v1).unwrap()), Some(hex::decode(v2).unwrap())),
         hightorrent::InfoHash::V1(v1) => (Some(hex::decode(v1).unwrap()), None),
@@ -95,7 +107,7 @@ pub(crate) async fn upload_submit(
         })?
         .to_string();
 
-    let size = torrent.decoded.files().iter().flatten().map(|f| f.size).sum::<u64>() as i64;
+    let size = files.iter().map(|f| f.size).sum::<u64>() as i64;
     let date = chrono::Utc::now();
     let bytes = torrent.to_vec();
     let id = Uuid::new_v4();
@@ -134,7 +146,7 @@ pub(crate) async fn upload_submit(
     let mut files_query = sqlx::QueryBuilder::<sqlx::Sqlite>::new("INSERT INTO [file] ([torrent], [path], [size]) VALUES ");
     let mut first = false;
 
-    for file in torrent.decoded.files().iter().flatten() {
+    for file in files.iter() {
         if !first {
             first = true;
         } else {

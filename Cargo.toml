@@ -1,3 +1,5 @@
+cargo-features = ["edition2024"]
+
 [package]
 name = "magnet-box"
 version = "1.0.0"
@@ -33,3 +35,10 @@ hightorrent = "0.4.1"
 bt_bencode = "0.8.2"
 hex = { version = "0.4.3", features = ["serde"] }
 rss = { version = "2.1.2", features = ["atom"] }
+
+[package.metadata.patch.hightorrent]
+version = "0.4.1"
+patches = ["patches/hightorrent.patch"]
+
+[patch.crates-io]
+hightorrent = { path = "target/patch/hightorrent-0.4.1" }

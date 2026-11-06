@@ -1,0 +1,11 @@
+services:
+    magnet-box:
+        build: .
+        ports:
+            - 8080:8080
+        restart: unless-stopped
+        volumes:
+            - ./data:/data
+        environment:
+            ROCKET_SECRET_KEY: "this_will_error_see_comment" # generate with `openssl rand -base64 32`
+            ROCKET_URL: "https://example.com" # replace with your domain
