@@ -20,6 +20,9 @@ services:
         environment:
             ROCKET_SECRET_KEY: "this_will_error_see_comment" # generate with `openssl rand -base64 32`
             ROCKET_URL: "https://example.com" # replace with your domain
+            # ROCKET_INSTANCE_TITLE: Magnet Box # optional custom title used on WebUI
+            # ROCKET_NUMWANT: 50 # optional default number of peers to return
+            # ROCKET_INTERVAL: 1800 # optional interval in seconds between peer announces
 ```
 
 The application logs will display a link to update the admin account's password. After doing so, you can upload your first torrent!
