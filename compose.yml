@@ -1,6 +1,6 @@
 services:
     magnet-box:
-        image: ghcr.io/brooke-ec/magnet-box
+        build: .
         ports:
             - 8080:8080
         restart: unless-stopped

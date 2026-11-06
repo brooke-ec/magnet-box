@@ -1,7 +1,7 @@
 {{#*inline "content"}}
   <main class="column gap">
-    <h1 style="font-size: 25px; margin-bottom: 0;">{{name}}</h1>
-    <span style="color: var(--ctp-subtext1);">
+    <h1 class="torrent-title">{{name}}</h1>
+    <span class="torrent-meta">
       {{#if user.is_admin}}
         {{author}} • 
       {{/if}}
@@ -13,20 +13,20 @@
     <div class="row gap">
       <a class="box" href="{{magnet}}" class="button">
         <span>Magnet Link</span>
-        <span class="fas" style="margin-left: 10px;"></span>
+        <span class="fas icon-margin-left"></span>
       </a>
       <a class="box" href="{{download}}" class="button">
         <span>Download</span>
-        <span class="fas" style="margin-left: 10px;"></span>
+        <span class="fas icon-margin-left"></span>
       </a>
       {{#if user.is_admin}}
         <a class="box" href="/torrent/{{id}}/delete" class="button">
           <span>Delete</span>
-          <span class="fas" style="margin-left: 10px;"></span>
+          <span class="fas icon-margin-left"></span>
         </a>
       {{/if}}
     </div>
-    <h2 style="margin-bottom: 0; margin-top: 10px">Files</h2>
+    <h2 class="torrent-files-heading">Files</h2>
     <div class="box">
       <div class="file-tree">
         {{#each tree}}

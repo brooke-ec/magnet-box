@@ -298,6 +298,57 @@ nav > .title {
 	font-size: 30px;
 }
 
+.inline-form {
+	display: inline;
+}
+
+.underlined {
+	text-decoration: underline;
+}
+
+.button-with-icon {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.icon-margin-left {
+	margin-left: 10px;
+}
+
+.message-title,
+.message-body {
+	margin-bottom: 25px;
+}
+
+.torrent-title {
+	font-size: 25px;
+	margin-bottom: 0;
+}
+
+.torrent-meta {
+	color: var(--ctp-subtext1);
+}
+
+.torrent-files-heading {
+	margin-top: 10px;
+	margin-bottom: 0;
+}
+
+.feed-link {
+	width: fit-content;
+	margin-left: 10px;
+}
+
+.scroll-container {
+	overflow-x: auto;
+	padding: 1px;
+}
+
+.torrent-list-header.admin-list-header {
+	background-color: #f51e5e;
+}
+
 a,
 button.a {
 	transition: color 125ms ease-in-out;
@@ -600,4 +651,9 @@ a {
 	background-color: var(--ctp-crust);
 	padding: 5px 10px;
 	border-radius: 5px;
+}
+
+.reset-link-code {
+	display: block;
+	padding-right: 2px;
 }

@@ -2,11 +2,11 @@
   <main>
     <h1>Generated Password Reset Link:</h1>
     <p>Give this link to {{username}} to update their password. It will expire in 1 hour.</p>
-    <div class="code" style="display: block; padding-right: 2px">
+    <div class="code reset-link-code">
         <span id="reset-link">{{url}}</span>
         <button class="fas a" type="button" id="copy-reset-link" aria-label="Copy reset link" title="Copy reset link"></button>
     </div>
-    <p><a href="/admin" style="text-decoration: underline;">Back</a>    </p>
+    <p><a href="/admin" class="underlined">Back</a>    </p>
   </main>
 
 <script>

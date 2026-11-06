@@ -1,10 +1,10 @@
 {{#*inline "content"}}
   <div class="column gap">
-    <a href="/feed.xml" style="width: fit-content; margin-left: 10px">
+    <a href="/feed.xml" class="feed-link">
       <span class="fas"></span> RSS Feed
     </a>
     {{#if torrents}}
-        <div style="overflow-x: auto; padding: 1px">
+        <div class="scroll-container">
           <div class="torrent-list">
             <div class="torrent-list-header">
               <div>Name</div>
@@ -33,9 +33,9 @@
       <main>
         No torrents uploaded yet!
         {{#if user}}
-          <a href="/torrent/upload" style="text-decoration: underline;">Upload a torrent</a>
+          <a href="/torrent/upload" class="underlined">Upload a torrent</a>
         {{else}}
-          <a href="/auth/login" style="text-decoration: underline;">Login</a>
+          <a href="/auth/login" class="underlined">Login</a>
         {{/if}}
         to get started!
       </main>
