@@ -31,7 +31,7 @@ pub(super) async fn list(library: &State<TorrentLibrary>, user: Option<User>) ->
     library
         .iter_torrents(|torrent| {
             torrents.push(TorrentListContext {
-                download: uri!(download(torrent.id.to_string(), format!("{}.torrent", torrent.name))).to_string(),
+                download: uri!(download_torrent(torrent.id.to_string(), torrent_filename(torrent.name.clone()))).to_string(),
                 date: torrent.date.format("%Y-%m-%d").to_string(),
                 size: format_size(torrent.size, BINARY),
                 url: format!("/torrent/{}", torrent.id),
@@ -279,13 +279,13 @@ pub(crate) async fn torrent(
             leechers: torrent.leechers,
             size: format_size(torrent.size, BINARY),
             date: torrent.date.format("%Y-%m-%d").to_string(),
-            download: uri!(download(torrent.id.to_string(), format!("{}.torrent", torrent.name))).to_string()
+            download: uri!(download_torrent(torrent.id.to_string(), torrent_filename(torrent.name.clone()))).to_string()
         },
     ))
 }
 
 #[get("/torrent/<id>/download/<name>")]
-pub(crate) async fn download(id: &str, name: &str, mut db: Connection<Storage>) -> Result<(ContentType, Vec<u8>), Status> {
+pub(crate) async fn download_torrent(id: &str, name: &str, mut db: Connection<Storage>) -> Result<(ContentType, Vec<u8>), Status> {
     let id = Uuid::parse_str(&id).map_err(|_| Status::NotFound)?;
     let torrent = sqlx::query!("SELECT [metainfo], [name] FROM [torrent] WHERE [id] = ?", id)
         .fetch_one(&mut **db)
@@ -295,7 +295,7 @@ pub(crate) async fn download(id: &str, name: &str, mut db: Connection<Storage>) 
             Status::InternalServerError
         })?;
 
-    if torrent.name != &name[..name.len() - 8] {
+    if torrent_filename(torrent.name) != name {
         return Err(Status::NotFound);
     }
 
@@ -348,4 +348,10 @@ pub(crate) async fn delete_torrent_submit(
             user
         },
     ))
+}
+
+pub(crate) fn torrent_filename(mut filename: String) -> String {
+    filename.retain(|c| c.is_ascii_alphanumeric() || c == '-');
+    filename.push_str(".torrent");
+    filename
 }

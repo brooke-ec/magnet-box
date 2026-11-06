@@ -7,7 +7,7 @@ use rss::{
     extension::atom::{AtomExtension, Link},
 };
 
-use crate::{configuration::AppConfiguration, tracking::TorrentLibrary};
+use crate::{configuration::AppConfiguration, interface::torrents::torrent_filename, tracking::TorrentLibrary};
 
 #[get("/feed.xml")]
 pub(crate) async fn torrent_feed(
@@ -22,9 +22,9 @@ pub(crate) async fn torrent_feed(
             let download = format!(
                 "{}{}",
                 config.url,
-                uri!(crate::interface::torrents::download(
+                uri!(crate::interface::torrents::download_torrent(
                     torrent.id.to_string(),
-                    format!("{}.torrent", torrent.name)
+                    torrent_filename(torrent.name.clone())
                 ))
             );
 
