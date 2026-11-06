@@ -9,6 +9,7 @@
             <div class="torrent-list-header">
               <div>Name</div>
               <div>Size</div>
+              <div>Peers</div>
               <div>Download</div>
               <div>Date</div>
             </div>
@@ -16,6 +17,9 @@
               <div class="torrent-list-row">
                 <div><span class="fas"></span> <a href="{{url}}">{{name}}</a></div>
                 <div>{{size}}</div>
+                <div>
+                  <span class="fas"></span> {{seeders}} <span class="fas"></span> {{leechers}}
+                </div>
                 <div>
                   <a href="{{magnet}}" class="fas"></a>
                   <a href="{{download}}" class="fas"></a>

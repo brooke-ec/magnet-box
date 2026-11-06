@@ -37,6 +37,8 @@ pub(super) async fn list(library: &State<TorrentLibrary>, user: Option<User>) ->
                 url: format!("/torrent/{}", torrent.id),
                 magnet: torrent.magnet.clone(),
                 name: torrent.name.clone(),
+                leechers: torrent.leechers,
+                seeders: torrent.seeders,
             });
 
             true
@@ -49,7 +51,9 @@ pub(super) async fn list(library: &State<TorrentLibrary>, user: Option<User>) ->
 #[derive(Serialize, Debug, Clone, PartialEq, Eq)]
 struct TorrentListContext {
     download: String,
+    leechers: usize,
     magnet: String,
+    seeders: usize,
     name: String,
     size: String,
     date: String,

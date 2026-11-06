@@ -444,12 +444,12 @@ a {
 
 .torrent-list {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) fit-content(100%) fit-content(100%) fit-content(100%);
+	grid-template-columns: minmax(auto, 1fr) repeat(4, fit-content(100%));
 	border-radius: 10px;
 	width: 100%;
 	font-size: 0.9em;
 	font-family: sans-serif;
-	min-width: 400px;
+	min-width: fit-content;
 	overflow: hidden;
 	outline: 1px solid var(--ctp-overlay0);
 }
