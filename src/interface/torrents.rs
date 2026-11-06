@@ -45,6 +45,8 @@ pub(super) async fn list(library: &State<TorrentLibrary>, user: Option<User>) ->
         })
         .await;
 
+    torrents.sort_by(|a, b| a.date.cmp(&b.date).reverse());
+
     Template::render("torrent/list", context! { user, torrents })
 }
 
