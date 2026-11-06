@@ -15,10 +15,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{Executor, FromRow, Sqlite, query};
 use uuid::Uuid;
 
-use crate::{
-    Storage,
-    interface::{CsrfGuard, Either},
-};
+use crate::{Storage, interface::CsrfGuard};
 
 pub(crate) const SESSION_COOKIE: &str = "session-token";
 pub(crate) const RETURN_COOKIE: &str = "return-page";
@@ -201,8 +198,8 @@ pub(crate) async fn reset_password_link(
     mut db: Connection<Storage>,
     user: Option<User>,
     token: &str,
-) -> Result<Template, (Status, Option<&'static str>)> {
-    let username: String = sqlx::query!(
+) -> Result<Template, (Status, Option<Template>)> {
+    let username = match sqlx::query!(
         "SELECT [username] FROM [user] WHERE [reset_token] = ? AND [reset_token_expiry] > CURRENT_TIMESTAMP LIMIT 1",
         token
     )
@@ -211,9 +208,18 @@ pub(crate) async fn reset_password_link(
     .map_err(|e| {
         rocket::error!("Failed to fetch username for password reset: {:?}", e);
         (Status::InternalServerError, None)
-    })?
-    .ok_or((Status::Gone, Some("password reset token is invalid")))?
-    .username;
+    })? {
+        Some(record) => record.username,
+        None => {
+            return Err((
+                Status::Gone,
+                Some(Template::render(
+                    "message",
+                    context! { user, title: "Error", message: "The password reset token is invalid or has expired." },
+                )),
+            ));
+        }
+    };
 
     Ok(Template::render("auth/reset-password", context! { user, username, token }))
 }
@@ -232,10 +238,10 @@ pub(crate) async fn reset_password_submit(
     cookie: &CookieJar<'_>,
     form: Form<PasswordForm>,
     user_session: Option<User>,
-) -> Result<Redirect, (Status, Option<Either<Template, &'static str>>)> {
+) -> Result<Redirect, (Status, Option<Template>)> {
     csrf.validate();
 
-    let user = sqlx::query!(
+    let user = match sqlx::query!(
         "SELECT [id] as \"uuid: Uuid\", [username] FROM [user] WHERE [reset_token] = ? AND [reset_token_expiry] > CURRENT_TIMESTAMP LIMIT 1",
         token
     )
@@ -244,26 +250,28 @@ pub(crate) async fn reset_password_submit(
     .map_err(|e| {
         rocket::error!("Failed to fetch user for password reset: {:?}", e);
         (Status::InternalServerError, None)
-    })?
-    .ok_or((Status::Gone, Some(Either::Right("password reset token is invalid"))))?;
+    })? {
+        Some(user) => user,
+        None => return Err((Status::Gone, Some(Template::render("message", context! { user: user_session, title: "Error", message: "The password reset token is invalid or has expired." })))),
+    };
 
     if form.password != form.confirm {
         return Err((
             Status::BadRequest,
-            Some(Either::Left(Template::render(
+            Some(Template::render(
                 "auth/reset-password",
                 context! { user: user_session, username: user.username, token: token, error: "Passwords do not match" },
-            ))),
+            )),
         ));
     }
 
     if form.password.len() < 6 {
         return Err((
             Status::BadRequest,
-            Some(Either::Left(Template::render(
+            Some(Template::render(
                 "auth/reset-password",
                 context! { user: user_session, username: user.username, token: token, error: "Password must be at least 6 characters long" },
-            ))),
+            )),
         ));
     }
 
