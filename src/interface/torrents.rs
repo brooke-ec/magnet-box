@@ -18,7 +18,7 @@ use crate::{
     Storage,
     configuration::AppConfiguration,
     interface::{
-        Either,
+        CsrfGuard, Either,
         auth::{Admin, User},
     },
     tracking::{InfoHash, TorrentLibrary},
@@ -63,12 +63,14 @@ pub(crate) async fn upload(user: User) -> Template {
 
 #[post("/torrent/upload", data = "<torrent>")]
 pub(crate) async fn upload_submit(
+    csrf: CsrfGuard,
     config: &State<AppConfiguration>,
     library: &State<TorrentLibrary>,
     mut db: Connection<Storage>,
     torrent: Form<TorrentForm>,
     user: User,
 ) -> Result<Redirect, Either<Template, Status>> {
+    let _ = csrf;
     let tracker = Tracker::from_str(&format!("{}/announce", config.url)).map_err(|e| {
         rocket::error!("Failed to parse tracker URL: {:?}", e);
         Either::Right(Status::InternalServerError)
@@ -316,11 +318,13 @@ pub(crate) async fn delete_torrent_confirm(id: &str, user: Admin, library: &Stat
 
 #[post("/torrent/<id>/delete")]
 pub(crate) async fn delete_torrent_submit(
+    csrf: CsrfGuard,
     id: &str,
     user: Admin,
     mut db: Connection<Storage>,
     library: &State<TorrentLibrary>,
 ) -> Result<Template, Status> {
+    let _ = csrf;
     let id = Uuid::parse_str(id).map_err(|_| Status::NotFound)?;
 
     sqlx::query!("DELETE FROM [torrent] WHERE [id] = ?", id)

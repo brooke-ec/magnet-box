@@ -15,7 +15,10 @@ use serde::{Deserialize, Serialize};
 use sqlx::{Executor, FromRow, Sqlite, query};
 use uuid::Uuid;
 
-use crate::{Storage, interface::Either};
+use crate::{
+    Storage,
+    interface::{CsrfGuard, Either},
+};
 
 pub(crate) const SESSION_COOKIE: &str = "session-token";
 pub(crate) const RESET_COOKIE: &str = "reset-token";
@@ -38,10 +41,12 @@ pub(crate) struct ChangePasswordForm {
 
 #[post("/auth/change-password", data = "<form>")]
 pub(crate) async fn change_password_submit(
+    csrf: CsrfGuard,
     mut db: Connection<Storage>,
     user: User,
     form: Form<ChangePasswordForm>,
 ) -> (Status, Option<Template>) {
+    let _ = csrf;
     if form.new_password != form.confirm_password {
         return (
             Status::BadRequest,
@@ -127,11 +132,13 @@ pub(crate) struct LoginForm {
 
 #[post("/auth/login", data = "<form>")]
 pub(crate) async fn login_submit(
+    csrf: CsrfGuard,
     mut db: Connection<Storage>,
     cookie: &CookieJar<'_>,
     form: Form<LoginForm>,
     user: Option<User>,
 ) -> Result<Redirect, (Status, Option<Template>)> {
+    let _ = csrf;
     if user.is_some() {
         return Ok(Redirect::to(uri!(profile)));
     }
@@ -178,7 +185,8 @@ pub(crate) async fn login_submit(
 }
 
 #[post("/auth/logout")]
-pub(crate) async fn logout(cookie: &CookieJar<'_>, user: User) -> Result<Template, Status> {
+pub(crate) async fn logout(csrf: CsrfGuard, cookie: &CookieJar<'_>, user: User) -> Result<Template, Status> {
+    let _ = csrf;
     cookie.remove_private(SESSION_COOKIE);
     Ok(Template::render(
         "message",
@@ -228,11 +236,13 @@ pub(crate) struct PasswordForm {
 
 #[post("/auth/reset-password", data = "<form>")]
 pub(crate) async fn reset_password_submit(
+    csrf: CsrfGuard,
     mut db: Connection<Storage>,
     cookie: &CookieJar<'_>,
     form: Form<PasswordForm>,
     user_session: Option<User>,
 ) -> Result<Redirect, (Status, Option<Either<Template, &'static str>>)> {
+    let _ = csrf;
     let token = cookie
         .get(RESET_COOKIE)
         .ok_or((Status::BadRequest, Some(Either::Right("password reset token is invalid"))))?

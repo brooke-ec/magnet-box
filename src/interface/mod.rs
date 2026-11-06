@@ -10,6 +10,8 @@ use crate::interface::{
     torrents::{list, torrent},
 };
 
+use rocket::http::Status;
+use rocket::request::{FromRequest, Outcome};
 use rocket_dyn_templates::{
     Template,
     handlebars::{Context, Handlebars, Helper, HelperResult, Output, RenderContext},
@@ -80,4 +82,20 @@ pub(crate) fn faring() -> rocket::fairing::AdHoc {
 pub(super) enum Either<L, R> {
     Left(L),
     Right(R),
+}
+
+pub(crate) struct CsrfGuard;
+
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for CsrfGuard {
+    type Error = ();
+
+    async fn from_request(request: &'r rocket::Request<'_>) -> Outcome<Self, ()> {
+        let sec_fetch_site = request.headers().get_one("Sec-Fetch-Site");
+        if matches!(sec_fetch_site, Some("cross-site")) {
+            return Outcome::Error((Status::Forbidden, ()));
+        }
+
+        Outcome::Success(CsrfGuard)
+    }
 }

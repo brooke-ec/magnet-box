@@ -1,7 +1,10 @@
 use crate::{
     Storage,
     configuration::AppConfiguration,
-    interface::auth::{Admin, User, create_reset_password, create_user, get_username},
+    interface::{
+        CsrfGuard,
+        auth::{Admin, User, create_reset_password, create_user, get_username},
+    },
 };
 use rocket::{State, form::Form, http::Status};
 use rocket_db_pools::Connection;
@@ -59,7 +62,8 @@ pub(crate) async fn delete_user_confirm(id: &str, user: Admin, mut db: Connectio
 }
 
 #[post("/admin/user/<id>/delete")]
-pub(crate) async fn delete_user_submit(id: &str, user: Admin, mut db: Connection<Storage>) -> Result<Template, Status> {
+pub(crate) async fn delete_user_submit(csrf: CsrfGuard, id: &str, user: Admin, mut db: Connection<Storage>) -> Result<Template, Status> {
+    let _ = csrf;
     let id = Uuid::parse_str(id).map_err(|_| Status::NotFound)?;
     sqlx::query!("DELETE FROM [user] WHERE [id] = ?", id)
         .execute(&mut **db)
@@ -100,11 +104,13 @@ pub(crate) struct ChangeUserRoleForm {
 
 #[post("/admin/user/<id>/set-role", data = "<form>")]
 pub(crate) async fn change_user_role(
+    csrf: CsrfGuard,
     id: &str,
     user: Admin,
     mut db: Connection<Storage>,
     form: Form<ChangeUserRoleForm>,
 ) -> Result<Template, Status> {
+    let _ = csrf;
     let id = Uuid::parse_str(id).map_err(|_| Status::NotFound)?;
 
     sqlx::query!("UPDATE [user] SET [is_admin] = ? WHERE [id] = ?", form.is_admin, id)
@@ -134,11 +140,13 @@ pub(crate) struct NewUserForm {
 
 #[post("/admin/user/create", data = "<form>")]
 pub(crate) async fn new_user_submit(
+    csrf: CsrfGuard,
     user: Admin,
     mut db: Connection<Storage>,
     form: Form<NewUserForm>,
     config: &State<AppConfiguration>,
 ) -> Result<Template, Status> {
+    let _ = csrf;
     let token = create_user(&mut **db, &form.username, form.admin).await.map_err(|e| {
         rocket::error!("Failed to create new user: {}", e);
         Status::InternalServerError
