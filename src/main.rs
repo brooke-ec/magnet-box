@@ -6,7 +6,7 @@ mod interface;
 mod tracking;
 
 use rocket::{
-    Config, Request,
+    Request,
     fairing::AdHoc,
     fs::{FileServer, NamedFile},
     futures::future::try_join_all,

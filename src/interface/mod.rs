@@ -119,8 +119,8 @@ impl CsrfGuard {
 
 fn csp() -> &'static str {
     "default-src 'self'; \
-     script-src 'self'; \
-     style-src 'self'; \
+     script-src 'unsafe-inline'; \
+     style-src 'unsafe-inline'; \
      img-src 'self' data:; \
      font-src 'self'; \
      frame-ancestors 'none'; \
