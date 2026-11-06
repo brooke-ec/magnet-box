@@ -11,7 +11,7 @@ Recommended installation using [Docker Compose](https://docs.docker.com/compose/
 ```yml
 services:
     magnet-box:
-        build: .
+        image: ghcr.io/brooke-ec/magnet-box
         ports:
             - 8080:8080
         restart: unless-stopped
