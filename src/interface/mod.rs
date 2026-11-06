@@ -10,6 +10,7 @@ use crate::interface::{
     torrents::{list, torrent},
 };
 
+use rocket::fairing::AdHoc;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use rocket_dyn_templates::{
@@ -45,6 +46,16 @@ pub(crate) fn faring() -> rocket::fairing::AdHoc {
                         },
                     ),
                 );
+            }))
+            .attach(AdHoc::on_response("security-headers", |_, response| {
+                Box::pin(async move {
+                    response.set_raw_header("Content-Security-Policy", csp());
+                    response.set_raw_header("X-Frame-Options", "DENY");
+                    response.set_raw_header("X-Content-Type-Options", "nosniff");
+                    response.set_raw_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+                    response.set_raw_header("Referrer-Policy", "strict-origin-when-cross-origin");
+                    response.set_raw_header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+                })
             }))
             .mount(
                 "/",
@@ -98,4 +109,15 @@ impl<'r> FromRequest<'r> for CsrfGuard {
 
         Outcome::Success(CsrfGuard)
     }
+}
+
+fn csp() -> &'static str {
+    "default-src 'self'; \
+     script-src 'self' 'unsafe-inline' cdn.jsdelivr.net; \
+     style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; \
+     img-src 'self' data:; \
+     font-src 'self'; \
+     frame-ancestors 'none'; \
+     base-uri 'self'; \
+     form-action 'self'"
 }

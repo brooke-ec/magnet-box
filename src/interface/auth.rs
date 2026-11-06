@@ -5,7 +5,7 @@ use rand::{RngExt, distr::Alphanumeric};
 use rocket::time::Duration;
 use rocket::{
     form::Form,
-    http::{Cookie, CookieJar, Status},
+    http::{Cookie, CookieJar, SameSite, Status},
     request::{FromRequest, Outcome, Request},
     response::Redirect,
 };
@@ -328,6 +328,8 @@ fn session_cookie(user_id: Uuid) -> Cookie<'static> {
         .unwrap(),
     ))
     .max_age(Duration::days(1))
+    .secure(true)
+    .same_site(SameSite::Lax)
     .build()
 }
 
