@@ -85,8 +85,8 @@ async fn database_init(rocket: rocket::Rocket<rocket::Build>) -> rocket::fairing
         };
 
         rocket::warn!(
-            "No user with a password was found. Set up the first user: http://127.0.0.1:{}{}",
-            rocket.figment().extract::<Config>().unwrap().port,
+            "No user with a password was found. Set up the first user: {}{}",
+            rocket.figment().extract::<AppConfiguration>().unwrap().url,
             uri!(crate::interface::auth::reset_password_link(token))
         );
     }
