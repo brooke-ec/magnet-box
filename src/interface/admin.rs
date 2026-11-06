@@ -71,7 +71,7 @@ pub(crate) async fn delete_user_submit(id: &str, user: Admin, mut db: Connection
 
     Ok(Template::render(
         "message",
-        context! { user, message: "🗑️ User deleted successfully." },
+        context! { user, title: "Success", message: "The user was successfully deleted." },
     ))
 }
 
@@ -117,7 +117,7 @@ pub(crate) async fn change_user_role(
 
     Ok(Template::render(
         "message",
-        context! { user, message: "🔑 User role updated successfully." },
+        context! { user, title: "Success", message: format!("The user has {} admin permissions.", if form.is_admin {"been given"} else {"has lost"}) },
     ))
 }
 

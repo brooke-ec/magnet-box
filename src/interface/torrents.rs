@@ -339,7 +339,8 @@ pub(crate) async fn delete_torrent_submit(
     Ok(Template::render(
         "message",
         context! {
-            message: "🗑️ Torrent deleted successfully.",
+            message: "The torrent was successfully deleted.",
+            title: "Success",
             user
         },
     ))

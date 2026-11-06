@@ -10,10 +10,11 @@ use rocket::{
     fairing::AdHoc,
     fs::{FileServer, NamedFile},
     futures::future::try_join_all,
-    http::Cookie,
+    http::{Cookie, Status},
     response::Redirect,
 };
 use rocket_db_pools::Database;
+use rocket_dyn_templates::{Template, context};
 use uuid::Uuid;
 
 use crate::{
@@ -157,7 +158,21 @@ fn unauthorized(request: &Request<'_>) -> Either<Redirect, &'static str> {
     }
 }
 
-#[rocket::get("/favicon.ico")]
+#[catch(default)]
+async fn default_catcher(status: rocket::http::Status, request: &Request<'_>) -> Result<Template, Status> {
+    let user = request.guard::<crate::interface::auth::User>().await.succeeded();
+
+    Ok(Template::render(
+        "message",
+        context! {
+            title: format!("{} {}", status.code, status.reason().unwrap_or("Unknown error")),
+            message: "This is embarrassing. Something went wrong. If you believe this to be a mistake, please try again later.",
+            user,
+        },
+    ))
+}
+
+#[get("/favicon.ico")]
 async fn favicon() -> Option<NamedFile> {
     NamedFile::open("static/favicon.ico").await.ok()
 }
@@ -167,9 +182,9 @@ async fn main() -> Result<(), rocket::Error> {
     rocket::build()
         .attach(Storage::init())
         .attach(AdHoc::try_on_ignite("migrations", database_init))
+        .register("/", catchers![unauthorized, default_catcher])
         .mount("/static", FileServer::from("static"))
         .attach(AdHoc::config::<AppConfiguration>())
-        .register("/", catchers![unauthorized])
         .mount("/", rocket::routes![favicon])
         .manage(TorrentLibrary::new().await)
         .attach(interface::faring())

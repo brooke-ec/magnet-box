@@ -1,7 +1,14 @@
 {{#*inline "content"}}
   <main>
+    {{#if title}}
+    <h1 style="margin-bottom: 25px;">{{title}}</h1>
+    {{/if}}
+
+    {{#if message}}
     <div style="margin-bottom: 25px;">{{message}}</div>
-    <a href="/" style="text-decoration: underline;">Return home.</a>
+    {{/if}}
+
+    <a href="/" style="text-decoration: underline;">Return Home</a>
   </main>
 {{/inline}}
 

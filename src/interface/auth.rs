@@ -107,7 +107,7 @@ pub(crate) async fn change_password_submit(
         Status::Ok,
         Some(Template::render(
             "message",
-            context! { user, message: "✅ Your password has been changed successfully." },
+            context! { user, title: "Success", message: "Your password has been successfully changed." },
         )),
     )
 }
@@ -182,7 +182,7 @@ pub(crate) async fn logout(cookie: &CookieJar<'_>, user: User) -> Result<Templat
     cookie.remove_private(SESSION_COOKIE);
     Ok(Template::render(
         "message",
-        context! { user, message: "👋 You have been logged out." },
+        context! { user, title: "Goodbye for now!", message: "You have been successfully logged out." },
     ))
 }
 
