@@ -1,1 +1,16 @@
-* text eol=lf
+* -text
+
+*.css text eol=lf
+*.hbs text eol=lf
+*.json text eol=lf
+*.lock text eol=lf
+*.md text eol=lf
+*.patch text eol=lf
+*.rs text eol=lf
+*.sql text eol=lf
+*.svg text eol=lf
+*.toml text eol=lf
+*.yml text eol=lf
+*.ico binary
+*.ttf binary
+*.woff2 binary
